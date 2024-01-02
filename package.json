@@ -1,0 +1,20 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "repl": "bun repl",
+    "migrate": "drizzle-kit generate:sqlite && bun migrator.ts",
+    "wipe": "rm -r drizzle sqlite.db"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.1.11",
+    "drizzle-orm": "^0.29.2",
+    "hono": "^3.11.11",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "bun-types": "^1.0.7",
+    "dprint": "^0.45.0",
+    "drizzle-kit": "^0.20.9"
+  }
+}
