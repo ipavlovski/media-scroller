@@ -30,3 +30,6 @@ sqlite.db
 
 # scratch
 scratch.ts
+
+# panda
+styled-system

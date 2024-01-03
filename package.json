@@ -4,7 +4,8 @@
     "repl": "while true; do /usr/bin/ts-node -e 'console.clear(); console.log(\"ready\")' -i; sleep 0; done",
     "wipe": "rm -r db/drizzle db/sqlite.db",
     "migrate": "drizzle-kit generate:sqlite && drizzle-kit push:sqlite",
-    "dev": "vite frontend"
+    "dev": "cd frontend && vite",
+    "prepare": "panda codegen --cwd frontend"
   },
   "dependencies": {
     "@hono/node-server": "^1.4.0",
@@ -32,6 +33,7 @@
     "drizzle-kit": "^0.20.9",
     "tsx": "^4.7.0",
     "vite": "^5.0.10",
-    "vite-tsconfig-paths": "^4.2.3"
+    "postcss": "^8.4.32",
+    "sass": "^1.69.7"
   }
 }

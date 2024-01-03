@@ -37,5 +37,6 @@
     "require": ["dotenv/config"],
     "exclude": ["node_modules", "scratch.ts"]
   },
+  "include": ["frontend", "frontend2"],
   "exclude": ["node_modules"]
 }
