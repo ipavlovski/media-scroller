@@ -1,12 +1,26 @@
 {
   "compilerOptions": {
-    "strict": true,
+    // "jsxImportSource": "hono/jsx",
+    // "module": "commonjs",
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
+    "module": "ESNext",
+    "target": "ESNext",
+    "outDir": "dist",
+    "sourceMap": true,
     "esModuleInterop": true,
+    "types": ["node", "vite/client"],
+    "moduleResolution": "Node",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "useDefineForClassFields": true,
+    "allowJs": false,
+    "skipLibCheck": false,
     "allowSyntheticDefaultImports": true,
-    "target": "esnext",
-    "module": "commonjs"
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+
+
   },
   "ts-node": {
     "esm": true,
@@ -16,10 +30,12 @@
       "esModuleInterop": true,
       "types": ["node"],
       "moduleResolution": "Node",
-      "lib": ["esnext", "DOM"],
-      "strict": true
+      "lib": ["es2020", "DOM"],
+      "strict": true,
     },
     "ignoreDiagnostics": [2393, 2300],
+    "require": ["dotenv/config"],
     "exclude": ["node_modules", "scratch.ts"]
-  }
+  },
+  "exclude": ["node_modules"]
 }

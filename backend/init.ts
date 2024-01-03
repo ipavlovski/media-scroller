@@ -1,18 +1,16 @@
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { Hono } from 'hono'
 import fs from 'node:fs/promises'
 import { z } from 'zod'
-import * as schema from '../schema'
-
-import { serveStatic } from '@hono/node-server/serve-static'
-// import { createServer } from 'node:http2'
+import * as schema from '../db/schema'
 
 const app = new Hono()
 
 const port = 3000
-const db = drizzle(new Database('sqlite.db'), { schema })
+const db = drizzle(new Database('db/sqlite.db'), { schema })
 const { images, tags } = schema
 
 const reqSchema = z.object({
@@ -30,7 +28,7 @@ app.get('/', (c) => {
 
 app.post('/images2', async (c) => {
   const allTags = db.select().from(tags).all()
- 
+
   const data = await c.req.json()
   console.log(data)
   // console.log(data)
@@ -52,7 +50,6 @@ app.post('/images', async (c) => {
 
   // insert image into database
   // db.insert(user).values({ name: 'asdf123', email: 'asdf@example.com' }).run()
-
 
   return c.text(`${dateDir}/${filename}`)
 })
