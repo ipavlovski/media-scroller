@@ -6,8 +6,12 @@ import { Hono } from 'hono'
 import fs from 'node:fs/promises'
 import { z } from 'zod'
 import * as schema from '../db/schema'
+import { appRouter } from './router'
+import { trpcServer } from '@hono/trpc-server'
+import { cors } from 'hono/cors'
 
 const app = new Hono()
+app.use('/trpc/*', cors())
 
 const port = 3000
 const db = drizzle(new Database('db/sqlite.db'), { schema })
@@ -53,6 +57,13 @@ app.post('/images', async (c) => {
 
   return c.text(`${dateDir}/${filename}`)
 })
+
+app.use(
+  '/trpc/*',
+  trpcServer({
+    router: appRouter,
+  })
+)
 
 const server = serve({ fetch: app.fetch, port })
 

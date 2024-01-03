@@ -1,5 +1,11 @@
 import { css } from '../styled-system/css'
-import { Center, Flex } from '../styled-system/jsx'
+import { Flex } from '../styled-system/jsx'
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { httpBatchLink } from '@trpc/client'
+import { useState } from 'react'
+import { trpc } from '../apis/trpc'
+import Listings from './listings'
 
 export default function App() {
   const styles = css({
@@ -8,14 +14,31 @@ export default function App() {
     '& h1': {
       _hover: {
         background: 'blue',
-        color: 'red'
-      }
-    }
+        color: 'red',
+      },
+    },
   })
 
+  const [trpcClient] = useState(() =>
+    trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: 'http://localhost:3000/trpc',
+        }),
+      ],
+    })
+  )
+
+  const [queryClient] = useState(() => new QueryClient())
+
   return (
-    <Flex width='100vw' height='100vh' flexDir='column' className={styles} alignItems='center'>
-      <h1>Hello test.</h1>
-    </Flex>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <Flex width='100vw' height='100vh' flexDir='column' className={styles} alignItems='center'>
+          <h1>Hello test.</h1>
+          <Listings />
+        </Flex>
+      </QueryClientProvider>
+    </trpc.Provider>
   )
 }
