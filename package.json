@@ -1,21 +1,21 @@
 {
-  "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
-    "repl": "bun repl",
-    "migrate": "drizzle-kit generate:sqlite && bun migrator.ts",
-    "wipe": "rm -r drizzle sqlite.db"
+    "dev": "tsx watch src/index.ts",
+    "repl": "while true; do /usr/bin/ts-node -e 'console.clear(); console.log(\"ready\")' -i; sleep 0; done",
+    "wipe": "rm -r drizzle sqlite.db",
+    "migrate": "drizzle-kit generate:sqlite && drizzle-kit push:sqlite"
   },
   "dependencies": {
-    "@hono/zod-validator": "^0.1.11",
+    "@hono/node-server": "^1.3.5",
     "better-sqlite3": "^9.2.2",
-    "drizzle-orm": "^0.29.2",
-    "hono": "^3.11.11",
+    "drizzle-orm": "^0.29.3",
+    "hono": "^3.11.12",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "bun-types": "^1.0.7",
+    "@types/better-sqlite3": "^7.6.8",
     "dprint": "^0.45.0",
-    "drizzle-kit": "^0.20.9"
+    "drizzle-kit": "^0.20.9",
+    "tsx": "^3.12.2"
   }
 }

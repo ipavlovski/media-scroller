@@ -1,10 +1,25 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "types": ["bun-types"]
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "esnext",
+    "module": "commonjs"
+  },
+  "ts-node": {
+    "esm": true,
+    "compilerOptions": {
+      "target": "esnext",
+      "module": "CommonJS",
+      "esModuleInterop": true,
+      "types": ["node"],
+      "moduleResolution": "Node",
+      "lib": ["esnext", "DOM"],
+      "strict": true
+    },
+    "ignoreDiagnostics": [2393, 2300],
+    "exclude": ["node_modules", "scratch.ts"]
   }
 }
-
