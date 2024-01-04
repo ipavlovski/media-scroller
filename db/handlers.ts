@@ -23,10 +23,19 @@ export async function createImageRecord(props: createImageRecordProps) {
   return lastInsertRowid
 }
 
-export async function queryPaginated(limit: number, cursor: Date) {
+export async function queryPaginatedByDate(limit: number, cursor: Date) {
   return await db.select()
     .from(images)
     .orderBy(desc(images.createdAt))
     .limit(limit)
     .where(gt(images.createdAt, cursor))
+}
+
+
+export async function queryPaginatedById(limit: number, cursor: number) {
+  return await db.select()
+    .from(images)
+    .orderBy(desc(images.id))
+    .limit(limit)
+    .where(gt(images.id, cursor))
 }

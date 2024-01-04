@@ -1,6 +1,6 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
-import { queryPaginated } from '../db/handlers'
+import { queryPaginatedByDate, queryPaginatedById } from '../db/handlers'
 
 const t = initTRPC.create()
 
@@ -42,8 +42,11 @@ export const appRouter = router({
 
   infinitePosts: t.procedure.input(
     z.object({
-      limit: z.number().min(1).max(100).nullish(),
-      cursor: z.date(), // .nullish(), // <-- "cursor" needs to exist, but can be any type
+      cursor: z.preprocess((val) => {
+        console.log(`val is ${val}`)
+        return val 
+      }, z.number()),
+      limit: z.number(), // .nullish(), // <-- "cursor" needs to exist, but can be any type
     }),
   ).query(async ({ input: { cursor } }) => {
     console.log('GETTING INFINITE POSTS')
@@ -62,12 +65,13 @@ export const appRouter = router({
     //   },
     // })
 
-    const items = await queryPaginated(limit + 1, cursor)
+    // const items = await queryPaginatedByDate(limit + 1, cursor)
+    const items = await queryPaginatedById(limit + 1, cursor)
 
     let nextCursor: typeof cursor | undefined | null = undefined
     if (items.length > limit) {
       const nextItem = items.pop()
-      nextCursor = nextItem!.createdAt
+      nextCursor = nextItem!.id
     }
     return {
       items,

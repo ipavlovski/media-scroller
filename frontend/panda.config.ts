@@ -10,26 +10,35 @@ export default defineConfig({
   // Files to exclude
   exclude: [],
 
+  globalCss: {
+    body: {
+      margin: 0,
+      padding: 0,
+      backgroundColor: 'slate.900',
+      color: 'slate.100',
+    },
+  },
+
   // Useful for theme customization
   theme: {
     extend: {
       keyframes: {
         marquee: {
           '0%': {
-            transform: 'translateX(0%)'
+            transform: 'translateX(0%)',
           },
           '100%': {
-            transform: 'translateX(-100%)'
-          }
-        }
+            transform: 'translateX(-100%)',
+          },
+        },
       },
       tokens: {
         fonts: {
           jakarta: { value: 'Plus Jakarta Sans, sans-serif' },
-          pacifico: { value: 'Pacifico, cursive;' }
-        }
-      }
-    }
+          pacifico: { value: 'Pacifico, cursive;' },
+        },
+      },
+    },
   },
 
   // hash classnames for devtools readability
@@ -39,5 +48,5 @@ export default defineConfig({
   jsxFramework: 'react',
 
   // The output directory for your css system
-  outdir: 'styled-system'
+  outdir: 'styled-system',
 })

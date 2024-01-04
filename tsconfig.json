@@ -37,5 +37,6 @@
     "exclude": ["node_modules", "scratch.ts"]
   },
   // "include": ["frontend", "frontend2"],
+  "include": ["backend", "frontend", "db"],
   "exclude": ["node_modules"]
 }

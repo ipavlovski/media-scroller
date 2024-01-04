@@ -1,22 +1,20 @@
 import { trpc } from '../apis/trpc'
 
 export default function Images() {
-  
   console.log('Loading images...')
-
   const myQuery = trpc.infinitePosts.useInfiniteQuery(
+    { limit: 10 },
     {
-      limit: 10,
-    },
-    {
-      getNextPageParam: (lastPage: any) => lastPage.nextCursor,
-      // initialCursor: 1, // <-- optional you can pass an initialCursor
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      initialCursor: 1000,
     },
   )
 
   return (
     <div>
-      {myQuery.data?.map((v: any) => <p>{v.id}</p>)}
+      {myQuery.data?.pages?.map(({ items }) =>
+        items.map(({ filename, id }) => <p key={filename}>{id}: {filename}</p>)
+      )}
     </div>
   )
 }

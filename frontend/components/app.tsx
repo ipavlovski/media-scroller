@@ -5,13 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { httpBatchLink } from '@trpc/client'
 import { useState } from 'react'
 import { trpc } from '../apis/trpc'
-import Listings from './listings'
 import Images from './images'
+import Listings from './listings'
 
 export default function App() {
   const styles = css({
-    backgroundColor: 'slate.900',
-    color: 'slate.100',
     '& h1': {
       _hover: {
         background: 'blue',
@@ -35,7 +33,7 @@ export default function App() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <Flex width='100vw' height='100vh' flexDir='column' className={styles} alignItems='center'>
+        <Flex flexDir='column' className={styles} alignItems='center'>
           <h1>Hello test.</h1>
           {/* <Listings /> */}
           <Images />
