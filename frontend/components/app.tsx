@@ -6,6 +6,7 @@ import { httpBatchLink } from '@trpc/client'
 import { useState } from 'react'
 import { trpc } from '../apis/trpc'
 import Listings from './listings'
+import Images from './images'
 
 export default function App() {
   const styles = css({
@@ -36,7 +37,8 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <Flex width='100vw' height='100vh' flexDir='column' className={styles} alignItems='center'>
           <h1>Hello test.</h1>
-          <Listings />
+          {/* <Listings /> */}
+          <Images />
         </Flex>
       </QueryClientProvider>
     </trpc.Provider>

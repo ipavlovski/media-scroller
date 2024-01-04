@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { between, eq } from 'drizzle-orm'
+import { asc, between, desc, gt } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
@@ -21,4 +21,12 @@ export async function createImageRecord(props: createImageRecordProps) {
   const { lastInsertRowid } = await db.insert(images).values(props)
 
   return lastInsertRowid
+}
+
+export async function queryPaginated(limit: number, cursor: Date) {
+  return await db.select()
+    .from(images)
+    .orderBy(desc(images.createdAt))
+    .limit(limit)
+    .where(gt(images.createdAt, cursor))
 }

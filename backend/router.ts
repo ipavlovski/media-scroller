@@ -1,9 +1,10 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
+import { queryPaginated } from '../db/handlers'
 
 const t = initTRPC.create()
 
-const publicProcedure = t.procedure
+// const publicProcedure = t.procedure
 const router = t.router
 
 async function getTags(name: string) {
@@ -37,6 +38,41 @@ export const appRouter = router({
     z.object({ name: z.string() }),
   ).mutation(async ({ input: { name } }) => {
     return await createTag(name)
+  }),
+
+  infinitePosts: t.procedure.input(
+    z.object({
+      limit: z.number().min(1).max(100).nullish(),
+      cursor: z.date(), // .nullish(), // <-- "cursor" needs to exist, but can be any type
+    }),
+  ).query(async ({ input: { cursor } }) => {
+    console.log('GETTING INFINITE POSTS')
+    const limit = 100
+
+    // const items = await prisma.post.findMany({
+    //   take: limit + 1, // get an extra item at the end which we'll use as next cursor
+    //   where: {
+    //     title: {
+    //       contains: 'Prisma', /* Optional filter */
+    //     },
+    //   },
+    //   cursor: cursor ? { myCursor: cursor } : undefined,
+    //   orderBy: {
+    //     myCursor: 'asc',
+    //   },
+    // })
+
+    const items = await queryPaginated(limit + 1, cursor)
+
+    let nextCursor: typeof cursor | undefined | null = undefined
+    if (items.length > limit) {
+      const nextItem = items.pop()
+      nextCursor = nextItem!.createdAt
+    }
+    return {
+      items,
+      nextCursor,
+    }
   }),
 })
 
