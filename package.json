@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "tsnd": "/usr/bin/tsnd -r dotenv/config --exit-child --respawn --clear backend/init.ts",
+    "tsnd": "/usr/bin/tsnd -r dotenv/config --exit-child --respawn --clear backend/server.ts",
     "repl": "while true; do /usr/bin/ts-node -e 'console.clear(); console.log(\"ready\")' -i; sleep 0; done",
     "wipe": "rm -r db/drizzle db/sqlite.db",
     "migrate": "drizzle-kit generate:sqlite && drizzle-kit push:sqlite",
