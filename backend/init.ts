@@ -23,7 +23,8 @@ const reqSchema = z.object({
 })
 
 // http://localhost:3000/2023-12/6Qaa3wstCP.png
-app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareX/' }))
+// app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareX/' }))
+app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareThumbs/' }))
 
 app.get('/', (c) => {
   console.log(c.req.url)

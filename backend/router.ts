@@ -1,10 +1,8 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
-import { queryPaginatedByDate, queryPaginatedById } from '../db/handlers'
+import { queryPaginatedById, queryPaginatedByDate  } from '../db/handlers'
 
 const t = initTRPC.create()
-
-// const publicProcedure = t.procedure
 const router = t.router
 
 async function getTags(name: string) {
@@ -21,12 +19,6 @@ async function createTag(name: string) {
 }
 
 export const appRouter = router({
-  // hello: publicProcedure.input(z.string().nullish()).query(({ input }) => {
-  //   return `Hello ${input ?? 'World'}!`
-  // }),
-  // getUser: publicProcedure.input(z.string().nullish()).query(({ input }) => {
-  //   return `Hello ${input ?? 'World'}!`
-  // }),
 
   getTags: t.procedure.input(
     z.object({ name: z.string() }),
@@ -43,36 +35,16 @@ export const appRouter = router({
   infinitePosts: t.procedure.input(
     z.object({
       cursor: z.preprocess((val) => {
-        console.log(`val is ${val}`)
-        return val 
-      }, z.number()),
-      limit: z.number(), // .nullish(), // <-- "cursor" needs to exist, but can be any type
+        console.log(`cursor is ${val}`)
+        return val
+      }, z.string().length(10)),
     }),
   ).query(async ({ input: { cursor } }) => {
-    console.log('GETTING INFINITE POSTS')
-    const limit = 100
 
-    // const items = await prisma.post.findMany({
-    //   take: limit + 1, // get an extra item at the end which we'll use as next cursor
-    //   where: {
-    //     title: {
-    //       contains: 'Prisma', /* Optional filter */
-    //     },
-    //   },
-    //   cursor: cursor ? { myCursor: cursor } : undefined,
-    //   orderBy: {
-    //     myCursor: 'asc',
-    //   },
-    // })
-
-    // const items = await queryPaginatedByDate(limit + 1, cursor)
-    const items = await queryPaginatedById(limit + 1, cursor)
-
-    let nextCursor: typeof cursor | undefined | null = undefined
-    if (items.length > limit) {
-      const nextItem = items.pop()
-      nextCursor = nextItem!.id
-    }
+    console.log(`receving this cursor: ${cursor}`)
+    const { items, nextCursor} = await queryPaginatedByDate(cursor)
+    console.log(`sending back nextCursor: ${nextCursor}`)
+    
     return {
       items,
       nextCursor,

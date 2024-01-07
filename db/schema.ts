@@ -1,18 +1,24 @@
 import { relations, sql } from 'drizzle-orm'
-import { integer, real, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { DateTime } from 'luxon'
 
 export const images = sqliteTable('images', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   directory: text('directory').notNull(),
   filename: text('filename').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).$default(() => new Date()),
-  isoDate: text('iso_date'),
-  format: text('format'), // png, gif
-  size: real('size'), // size in MB
-  aspect: integer('aspect'), // 1=big, 2=landscape, 3=portrait, 4=small
-  deleted: integer('boolean', { mode: 'boolean' }).default(false),
-  categoryId: integer("category_id"),
-
+  dateCreated: integer('date_created', { mode: 'timestamp_ms' })
+    .$default(() => new Date()).notNull(),
+  dateIso: text('date_iso')
+    .$default(() => DateTime.now().toISO()).notNull(),
+  dateAgg: text('date_agg').$default(() => {
+    const d = DateTime.now()
+    return d.hour < 5 ? d.minus({ day: 1 }).toSQLDate() : d.toSQLDate()
+  }).notNull(),
+  format: text('format').notNull(), // png, gif
+  size: real('size').notNull(), // size in MB
+  aspect: integer('aspect').notNull(), // 1=big, 2=landscape, 3=portrait, 4=small
+  deleted: integer('deleted', { mode: 'boolean' }).default(false).notNull(),
+  categoryId: integer('category_id'),
 })
 
 export const imageRelations = relations(images, ({ many, one }) => ({
@@ -21,7 +27,7 @@ export const imageRelations = relations(images, ({ many, one }) => ({
   category: one(categories, {
     fields: [images.categoryId],
     references: [categories.id],
-  })
+  }),
 }))
 
 export const categories = sqliteTable('categories', {
@@ -33,9 +39,8 @@ export const categories = sqliteTable('categories', {
 })
 
 export const categoryRelations = relations(categories, ({ many, one }) => ({
-  images: many(images)
+  images: many(images),
 }))
-
 
 export const tags = sqliteTable('tags', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -71,8 +76,7 @@ export const metadata = sqliteTable('metadata', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   content: text('content'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).$default(() => new Date()),
-  imageId: integer("image_id"),
-
+  imageId: integer('image_id'),
 })
 
 export const metadataRelations = relations(metadata, ({ one }) => ({

@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { asc, between, desc, gt } from 'drizzle-orm'
+import { asc, between, count, desc, gt, lte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
@@ -23,19 +23,59 @@ export async function createImageRecord(props: createImageRecordProps) {
   return lastInsertRowid
 }
 
-export async function queryPaginatedByDate(limit: number, cursor: Date) {
-  return await db.select()
-    .from(images)
-    .orderBy(desc(images.createdAt))
-    .limit(limit)
-    .where(gt(images.createdAt, cursor))
-}
-
-
 export async function queryPaginatedById(limit: number, cursor: number) {
   return await db.select()
     .from(images)
     .orderBy(desc(images.id))
     .limit(limit)
     .where(gt(images.id, cursor))
+}
+
+async function queryByStartEndDate(startDate: string, endDate: string) {
+  return await db.select().from(images)
+    .where(between(images.dateAgg, startDate, endDate))
+    .orderBy(desc(images.dateIso))
+}
+
+export async function queryPaginatedByDate(endDate: string) {
+  // get all the aggregated data by day, before or on the provided day:
+  // [ { date: '2023-09-30', count: 8 }, { date: '2023-09-29', count: 2 }, ...]
+  const aggregated = await db.select({ date: images.dateAgg, count: count(images.id) })
+    .from(images)
+    .groupBy(images.dateAgg)
+    .where(lte(images.dateAgg, endDate))
+    .orderBy(desc(images.dateAgg))
+
+  const MAX_IMAGES = 100
+  let total = 0
+  let cursor: string | undefined = undefined
+  let startDate = ''
+
+  for (let ind = 0; ind < aggregated.length; ind++) {
+    total = total + aggregated[ind].count
+    startDate = aggregated[ind].date
+    cursor = aggregated[ind + 1]?.date
+    if (total >= MAX_IMAGES) break
+  }
+
+  console.log(`first: ${startDate}, last: ${endDate}`)
+
+  const matches = await queryByStartEndDate(startDate, endDate)
+
+  // group-by OP, returns an object with dates as keys, and match-arrays as values
+  // eg. { "2024-12-03": [match1, match2], "2024-12-04": [match3,match4,match5], ...}
+  const objByDate = matches.reduce<{ [key: string]: typeof matches }>((group, item) => {
+    const { dateAgg } = item
+    group[dateAgg] = group[dateAgg] ?? []
+    group[dateAgg].push(item)
+    return group
+  }, {})
+
+  // convert the group-by object into iteratable array, sorted by key
+  const arrByDate = Object.entries(objByDate).map(([key, val]) => ({ date: key, images: val }))
+
+  return {
+    nextCursor: cursor,
+    items: arrByDate,
+  }
 }

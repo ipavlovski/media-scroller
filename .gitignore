@@ -29,7 +29,7 @@ drizzle
 sqlite.db
 
 # scratch
-scratch.ts
+scratch.*
 
 # panda
 styled-system
