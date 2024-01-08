@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { httpBatchLink } from '@trpc/client'
 import { useState } from 'react'
-import { css } from '../styled-system/css'
 import { trpc } from '../apis/trpc'
 import Images from './images'
-import Listings from './listings'
+import Sidebar from './sidebar'
 
 export default function App() {
   
@@ -31,7 +30,7 @@ export default function App() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        {/* <Listings /> */}
+        <Sidebar />
         <Images />
       </QueryClientProvider>
     </trpc.Provider>

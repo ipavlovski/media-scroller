@@ -48,14 +48,15 @@ const styles = {
     marginLeft: '12rem',
   }),
   header: css({
-    fontSize: '2rem',
-    marginTop: '5rem',
+    fontSize: '1.4rem',
+    fontWeight: 'bold',
+    marginTop: '2rem',
     _first: { marginTop: '1rem' },
   }),
   grid: css({
     display: 'grid',
-    gridTemplateColumns: '200px 200px 200px 200px',
-    gridAutoRows: '200px',
+    gridTemplateColumns: '125px 125px 125px 125px',
+    gridAutoRows: '125px',
     rowGap: '5px',
     columnGap: '5px',
     // justifyContent: 'center',
@@ -76,50 +77,6 @@ const fromServer = (dir: string, img: string) => {
   return `http://localhost:3000/${dir}/${img}`
 }
 
-function Sidebar() {
-  const styles = css({
-    position: 'fixed',
-    width: '5rem',
-    '& p': {
-      margin: '.5rem',
-    },
-  })
-
-  return (
-    <div className={styles}>
-      <p>test1</p>
-      <p>test2</p>
-      <p>test3</p>
-      <p>test4</p>
-      <p>test5</p>
-      <p>test6</p>
-      <p>test7</p>
-      <p>test8</p>
-      <p>test9</p>
-      <p>test10</p>
-      <p>test11</p>
-      <p>test12</p>
-      <p>test13</p>
-      <p>test14</p>
-      <p>test15</p>
-      <p>test16</p>
-      <p>test17</p>
-      <p>test18</p>
-      <p>test19</p>
-      <p>test20</p>
-    </div>
-  )
-}
-
-export default function Layouts() {
-  return (
-    <>
-      <Sidebar />
-      <ImageListings />
-    </>
-  )
-}
-
 const getAspect = (aspect: number) => {
   // 1=big, 2=landscape, 3=portrait, 4=small
   return aspect == 1 ? { width: 2, height: 2 } : aspect == 2
@@ -129,7 +86,7 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
-function ImageListings() {
+export default function Images() {
   const { ref, inView } = useInView()
 
   // data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage
@@ -163,8 +120,8 @@ function ImageListings() {
                       gridRow: `span ${height}`,
                       gridColumn: `span ${width}`,
                       objectFit: 'cover',
-                      width: `${200 * width}`,
-                      height: `${200 * height}`,
+                      width: `${150 * width}`,
+                      height: `${150 * height}`,
                     }} src={fromServer(directory, filename)} />
                   ))}
                 </div>
