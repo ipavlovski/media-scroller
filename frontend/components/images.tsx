@@ -115,14 +115,18 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map(({ directory, filename, width, height }) => (
-                    <img style={{
-                      gridRow: `span ${height}`,
-                      gridColumn: `span ${width}`,
-                      objectFit: 'cover',
-                      width: `${150 * width}`,
-                      height: `${150 * height}`,
-                    }} src={fromServer(directory, filename)} />
+                  {processedImages.map(({ directory, filename, width, height, dateIso, id }) => (
+                    <img
+                      key={id}
+                      style={{
+                        gridRow: `span ${height}`,
+                        gridColumn: `span ${width}`,
+                        objectFit: 'cover',
+                        width: `${150 * width}`,
+                        height: `${150 * height}`,
+                      }}
+                      src={fromServer(directory, filename)}
+                      title={dateIso} />
                   ))}
                 </div>
               </Fragment>
