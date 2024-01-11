@@ -2,9 +2,9 @@ import { CSSProperties, forwardRef, useEffect, useImperativeHandle, useRef, useS
 import { IconType } from 'react-icons'
 import { BsCheckCircleFill, BsJournal, BsJournalPlus } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
+import { trpc } from '../apis/trpc'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
-import { CssProperties } from '../styled-system/types'
 
 function Divider({ text }: { text: string }) {
   const styles = css({
@@ -26,7 +26,7 @@ type CustomDialogProps = {
   readonly dialogRef: HTMLDialogElement | null
   readonly containerRef: HTMLDivElement | null
 }
-const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType }>(
+const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType; action: (name: string) => void }>(
   (props, ref) => {
     const styles = css({
       '& dialog': {
@@ -77,11 +77,6 @@ const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType }>(
       setLeft(containerRef.current?.getBoundingClientRect().left)
     }, [containerRef.current?.getBoundingClientRect().left])
 
-    const iconClickHandler = () => {
-      dialogRef.current?.showModal()
-      console.log('Click on dialog handler...')
-    }
-
     const dialogOffsets: CSSProperties = {
       left: `${containerRef.current?.getBoundingClientRect().left}px`,
       top: `${containerRef.current?.getBoundingClientRect().top}px`,
@@ -89,7 +84,7 @@ const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType }>(
 
     return (
       <div ref={containerRef} className={styles}>
-        <props.icon size={'1.5rem'} onClick={iconClickHandler} />
+        <props.icon size={'1.5rem'} onClick={() => dialogRef.current?.showModal()} />
         <dialog ref={dialogRef} onClick={(e) => e.currentTarget.close()} style={dialogOffsets}
           onClose={() => {
             const input = dialogRef.current?.querySelector('input')
@@ -98,9 +93,11 @@ const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType }>(
           <main onClick={(e) => e.stopPropagation()}>
             <input type='text' autoFocus={true} />
             <BsCheckCircleFill
-              onClick={() => {
-                dialogRef.current?.close()
-                console.log('yes')
+              onClick={async () => {
+                // dialogRef.current?.close()
+                const value = dialogRef.current?.querySelector('input')?.value
+                if (value != null && value.length > 0) props.action(value)
+                console.log('Should check for result before close...')
               }} />
           </main>
         </dialog>
@@ -109,57 +106,61 @@ const CustomDialog = forwardRef<CustomDialogProps, { icon: IconType }>(
   },
 )
 
+const useCreateCategory = () => {
+  const createCategory = trpc.createCategory.useMutation()
+
+  return async (name: string) => {
+    return createCategory.mutateAsync({ name })
+  }
+}
+
+const useCreateTag = () => {
+  const createTag = trpc.createTag.useMutation()
+
+  return async (name: string) => {
+    return createTag.mutateAsync({ name })
+  }
+}
+
 function CategoriesDivider() {
   const ref = useRef<CustomDialogProps>(null)
+
+  const createCategory = useCreateCategory()
 
   return (
     <Flex mt={'2rem'} align={'center'}>
       <Divider text='Categories' />
-      <CustomDialog ref={ref} icon={TbCategoryPlus} />
+      <CustomDialog ref={ref} icon={TbCategoryPlus} action={createCategory} />
     </Flex>
   )
 }
 
-function TagsDivider2() {
+function TagsDivider() {
   const ref = useRef<CustomDialogProps>(null)
+
+  const createTag = useCreateTag()
+
 
   return (
     <Flex mt={'2rem'} align={'center'}>
       <Divider text='Tags' />
-      <CustomDialog ref={ref} icon={TbTagStarred} />
+      <CustomDialog ref={ref} icon={TbTagStarred} action={createTag} />
     </Flex>
   )
 }
 
 function CategoryResults() {
-  return <h3>category results</h3>
-}
-
-function TagsDivider() {
-  const styles = css({
-    '& svg': {
-      transition: 'color .2s ease-in-out',
-      _hover: {
-        color: 'green',
-        transition: 'color .2s ease-in-out',
-      },
-    },
-  })
-
-  const handler = () => {
-    console.log('add new tag...')
-  }
-
-  return (
-    <Flex mt={'2rem'} align={'center'} className={styles}>
-      <Divider text='Tags' />
-      <TbTagStarred size={'1.5rem'} onClick={handler} />
-    </Flex>
-  )
+  const { data, isSuccess } = trpc.getCategories.useQuery()
+  return data?.length
+    ? data?.map((v) => <p key={v.id}>{v.name}</p>)
+    : <p>No categories.</p>
 }
 
 function TagResults() {
-  return <h3>tag results</h3>
+  const { data, isSuccess } = trpc.getTags.useQuery()
+  return data?.length
+    ? data?.map((v) => <p key={v.id}>{v.name}</p>)
+    : <p>No tags.</p>
 }
 
 function MetadataDivider() {
@@ -173,14 +174,9 @@ function MetadataDivider() {
     },
   })
 
-  const handler = () => {
-    console.log('add new metadata...')
-  }
-
   return (
     <Flex mt={'2rem'} align={'center'} className={styles}>
       <Divider text='Metadata' />
-      {/* <BsJournalPlus size={'1.25rem'} strokeWidth={0.25} onClick={handler} /> */}
     </Flex>
   )
 }
@@ -222,7 +218,7 @@ export default function Sidebar() {
       <SearchBar />
       <CategoriesDivider />
       <CategoryResults />
-      <TagsDivider2 />
+      <TagsDivider />
       <TagResults />
       <MetadataDivider />
       <MetadataResults />

@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { asc, between, count, desc, gt, lte } from 'drizzle-orm'
+import { asc, between, count, desc, eq, gt, inArray, lte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
@@ -17,13 +17,13 @@ type createImageRecordProps = {
   createdAt: Date
   isoDate: string
 }
-export async function createImageRecord(props: createImageRecordProps) {
+async function createImageRecord(props: createImageRecordProps) {
   const { lastInsertRowid } = await db.insert(images).values(props)
 
   return lastInsertRowid
 }
 
-export async function queryPaginatedById(limit: number, cursor: number) {
+async function queryPaginatedById(limit: number, cursor: number) {
   return await db.select()
     .from(images)
     .orderBy(desc(images.id))
@@ -37,7 +37,7 @@ async function queryByStartEndDate(startDate: string, endDate: string) {
     .orderBy(desc(images.dateIso))
 }
 
-export async function queryPaginatedByDate(endDate: string) {
+async function queryPaginatedByDate(endDate: string) {
   // get all the aggregated data by day, before or on the provided day:
   // [ { date: '2023-09-30', count: 8 }, { date: '2023-09-29', count: 2 }, ...]
   const aggregated = await db.select({ date: images.dateAgg, count: count(images.id) })
@@ -78,4 +78,87 @@ export async function queryPaginatedByDate(endDate: string) {
     nextCursor: cursor,
     items: arrByDate,
   }
+}
+
+async function getCategories() {
+  return await db.select().from(categories)
+}
+
+async function createCategory(name: string) {
+  const { lastInsertRowid } = await db.insert(categories).values({ name })
+
+  return lastInsertRowid
+}
+
+async function deleteCategories(name: string) {
+  const deletedIds = await db.delete(categories).where(eq(categories.name, name)).returning({
+    deletedId: categories.id,
+  })
+
+  return deletedIds
+}
+
+async function getTags() {
+  return await db.select().from(tags)
+}
+
+async function createTag(name: string) {
+  const { lastInsertRowid } = await db.insert(tags).values({ name })
+
+  return lastInsertRowid
+}
+
+async function deleteTags(name: string) {
+  const deletedIds = await db.delete(tags).where(eq(tags.name, name)).returning({
+    deletedId: tags.id,
+  })
+
+  return deletedIds
+}
+
+
+async function getMetadata(imageId: number) {
+  return await db.select().from(metadata).where(eq(metadata.imageId, imageId))
+}
+
+async function createMetadata(content: string, imageIds: number[]) {
+  const matchingImages = await db.select().from(images).where(inArray(images.id, imageIds))
+
+  let total = 0
+  for (const image of matchingImages) {
+    await db.insert(metadata).values({ content, id: image.id })
+    total++
+  }
+
+  return total
+}
+
+async function deleteMetadata(metadataId: number) {
+  const deletedIds = await db.delete(metadata).where(eq(metadata.id, metadataId)).returning({
+    deletedId: metadata.id,
+  })
+
+  return deletedIds
+}
+
+export const tag = {
+  get: getTags,
+  create: createTag,
+  delete: deleteTags,
+}
+
+export const category = {
+  get: getCategories,
+  create: createCategory,
+  delete: deleteCategories,
+}
+
+export const meta = {
+  get: getMetadata,
+  create: createMetadata,
+  delete: deleteMetadata,
+}
+
+export const image = {
+  queryPaginatedByDate,
 }
