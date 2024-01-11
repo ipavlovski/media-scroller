@@ -1,6 +1,6 @@
 import { Fragment, useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { trpc } from '../apis/trpc'
+import { trpc } from '../apis/queries'
 import { css } from '../styled-system/css'
 
 type Coords = { i: number; j: number }
