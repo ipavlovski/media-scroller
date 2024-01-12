@@ -5,6 +5,7 @@ import { useCategories, useCreateCategory, useCreateTag, useTags } from '../apis
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
+import { useImageCounter } from './images'
 
 function Divider({ text }: { text: string }) {
   const styles = css({
@@ -84,6 +85,23 @@ function MetadataResults() {
   return <h3>metadata results</h3>
 }
 
+function ImageCounter() {
+  const styles = css({
+    width: '1.5rem',
+    height: '1.5rem',
+    backgroundColor: 'slate.100',
+    borderRadius: '2rem',
+    color: 'slate.900',
+    textAlign: 'center',
+    lineHeight: '1.4rem',
+    marginLeft: 'auto'
+  })
+
+  const count = useImageCounter()
+
+  return <div className={styles}>{count}</div>
+}
+
 function SearchBar() {
   const styles = css({
     marginTop: '.5rem',
@@ -100,10 +118,13 @@ function SearchBar() {
         <TbCategory size={'1.25rem'} />
         <TbTags size={'1.25rem'} />
         <BsJournal size={'1.25rem'} strokeWidth={0.25} />
+        <ImageCounter />
       </Flex>
     </div>
   )
 }
+
+
 
 export default function Sidebar() {
   const styles = css({

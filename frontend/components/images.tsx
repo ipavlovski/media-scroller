@@ -1,5 +1,7 @@
-import { Fragment, useEffect } from 'react'
+import { animated, useSpring } from '@react-spring/web'
+import { Fragment, useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
+import { create } from 'zustand'
 import { trpc } from '../apis/queries'
 import { css } from '../styled-system/css'
 
@@ -45,36 +47,6 @@ const prepImages = <T extends { width: number; height: number }>(images: T[]) =>
   return images
 }
 
-const styles = {
-  container: css({
-    marginLeft: '12rem',
-  }),
-  header: css({
-    fontSize: '1.4rem',
-    fontWeight: 'bold',
-    marginTop: '2rem',
-    _first: { marginTop: '1rem' },
-  }),
-  grid: css({
-    display: 'grid',
-    gridTemplateColumns: '125px 125px 125px 125px',
-    gridAutoRows: '125px',
-    rowGap: '5px',
-    columnGap: '5px',
-    // justifyContent: 'center',
-  }),
-  footer: css({
-    display: 'flex',
-    flexDir: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '2rem',
-    fontSize: '3rem',
-    textTransform: 'uppercase',
-    borderTop: 'solid white',
-  }),
-}
-
 const getAspect = (aspect: number) => {
   // 1=big, 2=landscape, 3=portrait, 4=small
   return aspect == 1 ? { width: 2, height: 2 } : aspect == 2
@@ -84,10 +56,73 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
+interface ImageSelectionStore {
+  count: number
+  actions: {
+    increase: (by: number) => void
+    decrease: (by: number) => void
+  }
+}
+
+const useImageSelectionStore = create<ImageSelectionStore>()(
+  (set) => ({
+    count: 0,
+    actions: {
+      increase: (by) => set((state) => ({ count: state.count + by })),
+      decrease: (by) => set((state) => ({ count: state.count - by })),
+    },
+  }),
+)
+
+export const useImageCounter = () => useImageSelectionStore((state) => state.count)
+
+type ImageProps = {
+  directory: string
+  filename: string
+  width: number
+  height: number
+  dateIso: string
+  id: number
+}
+function Image({ directory, filename, width, height, dateIso, id }: ImageProps) {
+  const [isSelected, setSelected] = useState(false)
+  const { decrease, increase } = useImageSelectionStore((state) => state.actions)
+
+  const [props, api] = useSpring(
+    () => ({
+      from: { width: 125 * width, height: 125 * height },
+    }),
+    [],
+  )
+
+  const styles = css({ margin: '4px' })
+
+  return (
+    <animated.img
+      key={id}
+      className={styles}
+      onClick={() => {
+        setSelected(!isSelected)
+        isSelected ? decrease(1) : increase(1)
+        isSelected
+          ? api.start({ to: { width: 125 * width, height: 125 * height } })
+          : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
+      }}
+      style={{
+        gridRow: `span ${height}`,
+        gridColumn: `span ${width}`,
+        objectFit: 'cover',
+        border: isSelected ? 'solid 2px yellow' : undefined,
+        ...props,
+      }}
+      src={fromServer(directory, filename)}
+      title={dateIso} />
+  )
+}
+
 export default function Images() {
   const { ref, inView } = useInView()
 
-  // data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage
   const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = trpc.infinitePosts
     .useInfiniteQuery({}, {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -99,7 +134,35 @@ export default function Images() {
   }, [inView, hasNextPage])
 
   if (isSuccess) console.log(`success!: pages= ${data.pages.length}`)
-
+  
+  const styles = {
+    container: css({
+      marginLeft: '12rem',
+    }),
+    header: css({
+      fontSize: '1.4rem',
+      fontWeight: 'bold',
+      marginTop: '2rem',
+      _first: { marginTop: '1rem' },
+    }),
+    grid: css({
+      display: 'grid',
+      gridTemplateColumns: '125px 125px 125px 125px',
+      gridAutoRows: '125px',
+      rowGap: '5px',
+      columnGap: '5px',
+    }),
+    footer: css({
+      display: 'flex',
+      flexDir: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: '2rem',
+      fontSize: '3rem',
+      textTransform: 'uppercase',
+      borderTop: 'solid white',
+    }),
+  }
   return (
     <div className={styles.container}>
       <div>
@@ -113,19 +176,7 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map(({ directory, filename, width, height, dateIso, id }) => (
-                    <img
-                      key={id}
-                      style={{
-                        gridRow: `span ${height}`,
-                        gridColumn: `span ${width}`,
-                        objectFit: 'cover',
-                        width: `${150 * width}`,
-                        height: `${150 * height}`,
-                      }}
-                      src={fromServer(directory, filename)}
-                      title={dateIso} />
-                  ))}
+                  {processedImages.map((image) => <Image {...image} />)}
                 </div>
               </Fragment>
             )
