@@ -6,9 +6,6 @@ import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
 
-import { MdCheckCircle, MdError, MdInfo } from 'react-icons/md'
-import { useToast } from './toast'
-
 function Divider({ text }: { text: string }) {
   const styles = css({
     borderBottom: 'solid white 2px',
@@ -108,25 +105,6 @@ function SearchBar() {
   )
 }
 
-function ToastTester() {
-  const styles = css({
-    gap: '1rem',
-    '& svg': {
-      fontSize: '2rem',
-    },
-  })
-
-  const { error, info, success } = useToast()
-
-  return (
-    <Flex className={styles}>
-      <MdInfo color='blue' onClick={() => (console.log('blue'), info('This is info...'))} />
-      <MdCheckCircle color='green' onClick={() => (console.log('green'), success('This is success...'))} />
-      <MdError color='red' onClick={() => (console.log('red'), error('This is error...'))} />
-    </Flex>
-  )
-}
-
 export default function Sidebar() {
   const styles = css({
     position: 'fixed',
@@ -137,7 +115,6 @@ export default function Sidebar() {
   return (
     <div className={styles}>
       <SearchBar />
-      <ToastTester />
       <CategoriesDivider />
       <CategoryResults />
       <TagsDivider />

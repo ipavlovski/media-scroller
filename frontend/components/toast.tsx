@@ -46,7 +46,7 @@ function Toast(props: ToastItem & { ind: number }) {
     color: 'black',
     position: 'fixed',
     width: '150px',
-    height: '60px',
+    height: '75px',
     right: '10px',
     rounded: '.5rem',
     padding: '.25rem',
@@ -60,14 +60,14 @@ function Toast(props: ToastItem & { ind: number }) {
   const timerID = useRef<ReturnType<typeof setTimeout>>()
   const remove = useToastStore((state) => state.remove)
 
-  const handleDismiss = () => {
-    remove(props.millis)
-  }
+  const handleDismiss = () => remove(props.millis)
+
+  const TOAST_TIMEOUT = 2000
 
   useEffect(() => {
     timerID.current = setTimeout(() => {
       handleDismiss()
-    }, 12000)
+    }, TOAST_TIMEOUT)
 
     return () => {
       clearTimeout(timerID.current)
@@ -94,7 +94,8 @@ function Toast(props: ToastItem & { ind: number }) {
   }
 
   return (
-    <div className={styles} style={{ top: `${(70 * props.ind + 10)}px` }} onClick={handleDismiss}>
+    <div className={styles} style={{ top: `${((75 + 10) * props.ind + 10)}px` }}
+      onClick={handleDismiss}>
       <Flex align='center' gap='.5rem'>
         {toastIcon}
         <h3>{props.type}</h3>

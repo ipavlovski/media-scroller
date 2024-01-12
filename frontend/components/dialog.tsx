@@ -2,6 +2,7 @@ import { CSSProperties, forwardRef, useEffect, useImperativeHandle, useRef, useS
 import { IconType } from 'react-icons'
 import { BsCheckCircleFill } from 'react-icons/bs'
 import { css } from '../styled-system/css'
+import { useToast } from './toast'
 
 export type DialogProps = {
   readonly dialogRef: HTMLDialogElement | null
@@ -46,6 +47,8 @@ export const Dialog = forwardRef<DialogProps,
 
       const [, setTop] = useState<number | undefined>(0)
 
+      const { error, success } = useToast()   
+
       useImperativeHandle(ref, () => ({
         get dialogRef() {
           return dialogRef.current
@@ -80,11 +83,11 @@ export const Dialog = forwardRef<DialogProps,
                   try {
                     const value = dialogRef.current?.querySelector('input')?.value
                     const result = (value != null && value.length > 0) && await props.action(value)
-                    console.log(`Success. Result: ${result}`)
+                    success(`Created: ${result}`)
                     dialogRef.current?.close()
                   } catch (err) {
                     const msg = err instanceof Error ? err.message : 'Unknown error.'
-                    console.log(msg)
+                    error(msg)
                   }
                 }} />
             </main>
