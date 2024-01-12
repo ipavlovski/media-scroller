@@ -9,7 +9,7 @@ export type DialogProps = {
 }
 
 export const Dialog = forwardRef<DialogProps,
-  { icon: IconType; action: (name: string) => void }>(
+  { icon: IconType; action: (name: string) => Promise<number> }>(
     (props, ref) => {
       const styles = css({
         '& dialog': {
@@ -77,10 +77,15 @@ export const Dialog = forwardRef<DialogProps,
               <input type='text' autoFocus={true} />
               <BsCheckCircleFill
                 onClick={async () => {
-                  // dialogRef.current?.close()
-                  const value = dialogRef.current?.querySelector('input')?.value
-                  if (value != null && value.length > 0) props.action(value)
-                  console.log('Should check for result before close...')
+                  try {
+                    const value = dialogRef.current?.querySelector('input')?.value
+                    const result = (value != null && value.length > 0) && await props.action(value)
+                    console.log(`Success. Result: ${result}`)
+                    dialogRef.current?.close()
+                  } catch (err) {
+                    const msg = err instanceof Error ? err.message : 'Unknown error.'
+                    console.log(msg)
+                  }
                 }} />
             </main>
           </dialog>

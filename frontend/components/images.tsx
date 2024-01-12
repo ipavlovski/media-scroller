@@ -3,6 +3,8 @@ import { useInView } from 'react-intersection-observer'
 import { trpc } from '../apis/queries'
 import { css } from '../styled-system/css'
 
+const fromServer = (dir: string, img: string) => `http://localhost:3000/${dir}/${img}`
+
 type Coords = { i: number; j: number }
 const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
   const max = 4
@@ -11,7 +13,7 @@ const prepImages = <T extends { width: number; height: number }>(images: T[]) =>
   const coords: Coords = { i: 0, j: 0 }
 
   for (const color of images) {
-    // check item to the right (not beyond grid boundary, and not obstructed from above)
+    // check item to the right (not beyond grid boundary, and not obstructed from above/right)
     const isWidthOK = color.width == 1 || (coords.j + 2 <= max && grid[coords.i]![coords.j + 1]!)
     if (!isWidthOK) color.width = 1
 
@@ -71,10 +73,6 @@ const styles = {
     textTransform: 'uppercase',
     borderTop: 'solid white',
   }),
-}
-
-const fromServer = (dir: string, img: string) => {
-  return `http://localhost:3000/${dir}/${img}`
 }
 
 const getAspect = (aspect: number) => {

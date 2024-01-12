@@ -103,6 +103,9 @@ async function getTags() {
 }
 
 async function createTag(name: string) {
+
+  if (name.includes('lol')) throw new Error('NOT GOOD ENOUGH.')
+
   const { lastInsertRowid } = await db.insert(tags).values({ name })
 
   return lastInsertRowid

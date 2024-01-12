@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { trpc } from '../apis/queries'
 import Images from './images'
 import Sidebar from './sidebar'
+import { Toaster } from './toast'
 
 export default function App() {
   
@@ -32,6 +33,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <Sidebar />
         <Images />
+        <Toaster />
       </QueryClientProvider>
     </trpc.Provider>
   )
