@@ -60,8 +60,11 @@ const getAspect = (aspect: number) => {
 
 type SelectedImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
 interface ImageSelectionStore {
-  active: SelectedImage[]
+  selected: SelectedImage[]
+  active: SelectedImage | null
   actions: {
+    activate: (selectedImage: SelectedImage) => void
+    deactivate: () => void
     select: (selectedImage: SelectedImage) => void
     deselect: (id: number) => void
     deselectAll: () => void
@@ -70,68 +73,39 @@ interface ImageSelectionStore {
 
 const useImageSelectionStore = create<ImageSelectionStore>()(
   (set) => ({
-    active: [],
+    selected: [],
+    active: null,
     actions: {
-      select: (selection) => set((state) => ({ active: [...state.active, selection] })),
+      activate: (active) =>
+        set((state) => {
+          // if there is an existing selection (and it differs from incoming one), deselect it first
+          state.active != null && state.active.id != active.id && state.active.setter(false)
+          return ({ active })
+        }),
+      deactivate: () =>
+        set((state) => {
+          // if there is an existing selection, deselect it
+          state.active != null && state.active.setter(false)
+          return ({ active: null })
+        }),
+      select: (selection) => set((state) => ({ selected: [...state.selected, selection] })),
       deselect: (id) =>
         set((state) => {
-          const item = state.active.find((item) => item.id == id)
+          const item = state.selected.find((item) => item.id == id)
           item && item.setter(false)
-          return { active: state.active.filter((item) => item.id != id) }
+          return { selected: state.selected.filter((item) => item.id != id) }
         }),
       deselectAll: () =>
         set((state) => {
-          state.active.map((item) => item.setter(false))
-          return { active: [] }
+          state.selected.map((item) => item.setter(false))
+          return { selected: [] }
         }),
     },
   }),
 )
 
-export const useImageSelection = () => useImageSelectionStore((state) => state.active)
+export const useImageSelection = () => useImageSelectionStore((state) => state.selected)
 export const useImageActions = () => useImageSelectionStore((state) => state.actions)
-
-function useLongPress(callback = () => {}, ms = 300, springApi: SpringRef<{ opacity: number }>) {
-  const [startLongPress, setStartLongPress] = useState(false)
-
-  useEffect(() => {
-    let timerId: NodeJS.Timeout | undefined
-    startLongPress ? timerId = setTimeout(callback, ms) : clearTimeout(timerId)
-
-    return () => clearTimeout(timerId)
-  }, [callback, ms, startLongPress])
-
-  const onMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
-    if (e.target instanceof HTMLElement && e.target.tagName == 'DIV') {
-      console.log(`OPEN IMAGE`)
-
-      // prevent long-click on the title from activating stuff
-      return
-    }
-    setStartLongPress(true)
-  }
-
-  const onMouseUp = () => {
-    // console.log('CLICK from onMouseUP handler')
-    setStartLongPress(false)
-  }
-
-  const onMouseEnter = () => {
-    springApi.start({to: { opacity: .7 }, delay: 200})
-  }
-
-  const onMouseLeave = () => {
-    springApi.start({to: { opacity: 0 }})
-    setStartLongPress(false)
-  }
-
-  return {
-    onMouseDown,
-    onMouseUp,
-    onMouseEnter,
-    onMouseLeave,
-  }
-}
 
 type ImageProps = {
   directory: string
@@ -144,7 +118,12 @@ type ImageProps = {
 
 function Image({ directory, filename, width, height, dateIso, id }: ImageProps) {
   const [isSelected, setSelected] = useState(false)
-  const { select, deselect } = useImageActions()
+  const [isActive, setActive] = useState(false)
+  const { select, deselect, activate, deactivate } = useImageActions()
+
+  /*
+  SPRINGS
+  */
 
   const [props, api] = useSpring(
     () => ({
@@ -160,7 +139,11 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
     [],
   )
 
-  const longPressHandler = () => {
+  /*
+  CLICK HANDLERS
+  */
+
+  const longClickHandler = () => {
     if (!isSelected) {
       setSelected(true)
       select({ id, setter: setSelected })
@@ -173,24 +156,70 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
       ? api.start({ to: { width: 125 * width, height: 125 * height } })
       : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
   }
-  const longPressProps = useLongPress(longPressHandler, 500, opacityApi)
 
+  const shortClickHandler = () => {
+    setActive(true)
+    activate({ id, setter: setActive })
+  }
+
+  const headerClickHandler = () => {
+    console.log(`OPEN IMAGE`)
+    
+  }
+
+  /*
+  MOUSE EVENTS
+  */
+
+  // const longPressProps = useShortLongClick(longClickHandler, shortClickHandler, 500, opacityApi)
+  const [startLongPress, setStartLongPress] = useState(false)
+  const LONG_CLICK_MS = 500
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | undefined
+    startLongPress ? timerId = setTimeout(longClickHandler, LONG_CLICK_MS) : clearTimeout(timerId)
+
+    return () => clearTimeout(timerId)
+  }, [startLongPress])
+
+  const onMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
+    if (e.target instanceof HTMLElement && e.target.tagName == 'DIV') {
+      headerClickHandler()
+
+      // prevents long-click on the title from activating stuff
+      return
+    }
+    setStartLongPress(true)
+  }
+
+  const onMouseUp = () => {
+    shortClickHandler()
+    setStartLongPress(false)
+  }
+
+  const onMouseEnter = () => {
+    opacityApi.start({ to: { opacity: .7 }, delay: 200 })
+  }
+
+  const onMouseLeave = () => {
+    opacityApi.start({ to: { opacity: 0 } })
+    setStartLongPress(false)
+  }
+
+  const longPressProps = { onMouseUp,  onMouseDown, onMouseEnter, onMouseLeave }
 
   return (
-    <animated.div
-      // onMouseDown={}
-      {...longPressProps}
-      style={{
-        position: 'relative',
-        gridRow: `span ${height}`,
-        gridColumn: `span ${width}`,
-      }}>
+    <animated.div {...longPressProps} style={{
+      position: 'relative',
+      gridRow: `span ${height}`,
+      gridColumn: `span ${width}`,
+    }}>
       <animated.div
         style={{
           position: 'absolute',
           marginLeft: '4px',
           backgroundColor: 'black',
-          ...opacityProps,
+          ...{ opacity: isActive || isSelected ? .8 : opacityProps.opacity },
           ...{ width: props.width },
           cursor: 'pointer',
           height: '1.5rem',
