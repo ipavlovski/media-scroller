@@ -1,6 +1,7 @@
 import { animated, useSpring } from '@react-spring/web'
-import { Fragment, useEffect, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { SpringRef } from '@react-spring/web'
+import { Fragment, useEffect, useState, useTransition } from 'react'
+import type { CSSProperties, Dispatch, MouseEventHandler, SetStateAction } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { trpc } from '../apis/queries'
@@ -90,7 +91,7 @@ const useImageSelectionStore = create<ImageSelectionStore>()(
 export const useImageSelection = () => useImageSelectionStore((state) => state.active)
 export const useImageActions = () => useImageSelectionStore((state) => state.actions)
 
-function useLongPress(callback = () => {}, ms = 300) {
+function useLongPress(callback = () => {}, ms = 300, springApi: SpringRef<{ opacity: number }>) {
   const [startLongPress, setStartLongPress] = useState(false)
 
   useEffect(() => {
@@ -100,10 +101,35 @@ function useLongPress(callback = () => {}, ms = 300) {
     return () => clearTimeout(timerId)
   }, [callback, ms, startLongPress])
 
+  const onMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
+    if (e.target instanceof HTMLElement && e.target.tagName == 'DIV') {
+      console.log(`OPEN IMAGE`)
+
+      // prevent long-click on the title from activating stuff
+      return
+    }
+    setStartLongPress(true)
+  }
+
+  const onMouseUp = () => {
+    // console.log('CLICK from onMouseUP handler')
+    setStartLongPress(false)
+  }
+
+  const onMouseEnter = () => {
+    springApi.start({to: { opacity: .7 }, delay: 200})
+  }
+
+  const onMouseLeave = () => {
+    springApi.start({to: { opacity: 0 }})
+    setStartLongPress(false)
+  }
+
   return {
-    onMouseDown: () => setStartLongPress(true),
-    onMouseUp: () => setStartLongPress(false),
-    onMouseLeave: () => setStartLongPress(false),
+    onMouseDown,
+    onMouseUp,
+    onMouseEnter,
+    onMouseLeave,
   }
 }
 
@@ -127,6 +153,13 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
     [],
   )
 
+  const [opacityProps, opacityApi] = useSpring(
+    () => ({
+      to: { opacity: 0 },
+    }),
+    [],
+  )
+
   const longPressHandler = () => {
     if (!isSelected) {
       setSelected(true)
@@ -140,26 +173,41 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
       ? api.start({ to: { width: 125 * width, height: 125 * height } })
       : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
   }
-  const longPressProps = useLongPress(longPressHandler, 500)
-  const styles = css({ margin: '4px' })
+  const longPressProps = useLongPress(longPressHandler, 500, opacityApi)
+
 
   return (
-    <animated.img
-      key={id}
+    <animated.div
+      // onMouseDown={}
       {...longPressProps}
-      className={styles}
-      onClick={() => {
-        console.log('CLICK')
-      }}
       style={{
+        position: 'relative',
         gridRow: `span ${height}`,
         gridColumn: `span ${width}`,
-        objectFit: 'cover',
-        border: isSelected ? 'solid 2px yellow' : undefined,
-        ...props,
-      }}
-      src={fromServer(directory, filename)}
-      title={dateIso} />
+      }}>
+      <animated.div
+        style={{
+          position: 'absolute',
+          marginLeft: '4px',
+          backgroundColor: 'black',
+          ...opacityProps,
+          ...{ width: props.width },
+          cursor: 'pointer',
+          height: '1.5rem',
+          fontSize: '.5rem',
+        }}>
+        {dateIso}
+      </animated.div>
+      <animated.img
+        style={{
+          margin: '4px',
+          objectFit: 'cover',
+          border: isSelected ? 'solid 2px yellow' : undefined,
+          ...props,
+        }}
+        src={fromServer(directory, filename)}
+        title={dateIso} />
+    </animated.div>
   )
 }
 
@@ -219,7 +267,7 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image) => <Image {...image} />)}
+                  {processedImages.map((image) => <Image {...image} key={image.id} />)}
                 </div>
               </Fragment>
             )
