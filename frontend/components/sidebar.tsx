@@ -5,7 +5,7 @@ import { useCategories, useCreateCategory, useCreateTag, useTags } from '../apis
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
-import { useImageCounter } from './images'
+import { useImageActions, useImageSelection } from './images'
 
 function Divider({ text }: { text: string }) {
   const styles = css({
@@ -94,12 +94,13 @@ function ImageCounter() {
     color: 'slate.900',
     textAlign: 'center',
     lineHeight: '1.4rem',
-    marginLeft: 'auto'
+    marginLeft: 'auto',
+    cursor: 'pointer',
   })
 
-  const count = useImageCounter()
-
-  return <div className={styles}>{count}</div>
+  const imageSelection = useImageSelection()
+  const { deselectAll } = useImageActions()
+  return <div className={styles} onClick={() => deselectAll()}>{imageSelection.length}</div>
 }
 
 function SearchBar() {
@@ -123,8 +124,6 @@ function SearchBar() {
     </div>
   )
 }
-
-
 
 export default function Sidebar() {
   const styles = css({

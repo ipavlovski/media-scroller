@@ -1,5 +1,6 @@
 import { animated, useSpring } from '@react-spring/web'
 import { Fragment, useEffect, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { trpc } from '../apis/queries'
@@ -56,25 +57,55 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
+type SelectedImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
 interface ImageSelectionStore {
-  count: number
+  active: SelectedImage[]
   actions: {
-    increase: (by: number) => void
-    decrease: (by: number) => void
+    select: (selectedImage: SelectedImage) => void
+    deselect: (id: number) => void
+    deselectAll: () => void
   }
 }
 
 const useImageSelectionStore = create<ImageSelectionStore>()(
   (set) => ({
-    count: 0,
+    active: [],
     actions: {
-      increase: (by) => set((state) => ({ count: state.count + by })),
-      decrease: (by) => set((state) => ({ count: state.count - by })),
+      select: (selection) => set((state) => ({ active: [...state.active, selection] })),
+      deselect: (id) =>
+        set((state) => {
+          const item = state.active.find((item) => item.id == id)
+          item && item.setter(false)
+          return { active: state.active.filter((item) => item.id != id) }
+        }),
+      deselectAll: () =>
+        set((state) => {
+          state.active.map((item) => item.setter(false))
+          return { active: [] }
+        }),
     },
   }),
 )
 
-export const useImageCounter = () => useImageSelectionStore((state) => state.count)
+export const useImageSelection = () => useImageSelectionStore((state) => state.active)
+export const useImageActions = () => useImageSelectionStore((state) => state.actions)
+
+function useLongPress(callback = () => {}, ms = 300) {
+  const [startLongPress, setStartLongPress] = useState(false)
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | undefined
+    startLongPress ? timerId = setTimeout(callback, ms) : clearTimeout(timerId)
+
+    return () => clearTimeout(timerId)
+  }, [callback, ms, startLongPress])
+
+  return {
+    onMouseDown: () => setStartLongPress(true),
+    onMouseUp: () => setStartLongPress(false),
+    onMouseLeave: () => setStartLongPress(false),
+  }
+}
 
 type ImageProps = {
   directory: string
@@ -84,9 +115,10 @@ type ImageProps = {
   dateIso: string
   id: number
 }
+
 function Image({ directory, filename, width, height, dateIso, id }: ImageProps) {
   const [isSelected, setSelected] = useState(false)
-  const { decrease, increase } = useImageSelectionStore((state) => state.actions)
+  const { select, deselect } = useImageActions()
 
   const [props, api] = useSpring(
     () => ({
@@ -95,18 +127,29 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
     [],
   )
 
+  const longPressHandler = () => {
+    if (!isSelected) {
+      setSelected(true)
+      select({ id, setter: setSelected })
+    } else {
+      setSelected(false)
+      deselect(id)
+    }
+
+    isSelected
+      ? api.start({ to: { width: 125 * width, height: 125 * height } })
+      : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
+  }
+  const longPressProps = useLongPress(longPressHandler, 500)
   const styles = css({ margin: '4px' })
 
   return (
     <animated.img
       key={id}
+      {...longPressProps}
       className={styles}
       onClick={() => {
-        setSelected(!isSelected)
-        isSelected ? decrease(1) : increase(1)
-        isSelected
-          ? api.start({ to: { width: 125 * width, height: 125 * height } })
-          : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
+        console.log('CLICK')
       }}
       style={{
         gridRow: `span ${height}`,
@@ -134,7 +177,7 @@ export default function Images() {
   }, [inView, hasNextPage])
 
   if (isSuccess) console.log(`success!: pages= ${data.pages.length}`)
-  
+
   const styles = {
     container: css({
       marginLeft: '12rem',
