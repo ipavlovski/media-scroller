@@ -1,5 +1,5 @@
 import { animated, useSpring } from '@react-spring/web'
-import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
+import type { Dispatch, MouseEventHandler, ReactNode, SetStateAction } from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
@@ -364,21 +364,15 @@ export default function Images() {
     }),
   }
 
-  const getNear = <T extends { directory: string; filename: string }>(arr: T[], ind: number) => {
-    const left = arr.at(ind - 1)
-    const right = arr.at(ind + 1)
 
-    return {
-      left: left && `${left.directory}/${left.filename}`,
-      right: right && `${right.directory}/${right.filename}`,
-    }
-  }
+  let left: string | undefined = undefined
+  let center: string | undefined = undefined
 
   return (
     <div className={styles.container}>
       <div>
-        {data?.pages.map(({ items }) =>
-          items.map(({ date, images }) => {
+        {data?.pages.map(({ items }, pageInd) =>
+          items.map(({ date, images }, dateInd) => {
             const processedImages = prepImages(
               images.map((v) => ({ ...v, ...getAspect(v.aspect) })),
             )
@@ -387,9 +381,21 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image, ind, arr) => (
-                    <Image key={image.id} {...image} {...getNear(arr, ind)} />
-                  ))}
+                  {processedImages.map((image, ind) => {
+
+                    // try to get the 'next' item (in a triple-nested data-structure)
+                    let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(ind + 1)
+                    nextItem ??= data?.pages.at(pageInd)?.items.at(dateInd + 1)?.images.at(0)
+                    nextItem ??= data?.pages.at(pageInd + 1)?.items.at(0)?.images.at(0)
+                    const right = nextItem && `${nextItem.directory}/${nextItem.filename}`
+
+                    // make the current item 'last', and then refresh the current one
+                    left = center
+                    const item = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(ind)
+                    center = item && `${item.directory}/${item.filename}`
+
+                    return <Image key={image.id} {...image} left={left} right={right} />
+                  })}
                 </div>
               </Fragment>
             )
