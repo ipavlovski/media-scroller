@@ -6,7 +6,8 @@ import { create } from 'zustand'
 import { trpc } from '../apis/queries'
 import { css } from '../styled-system/css'
 
-const fromServer = (dirImg: string) => `http://localhost:3000/${dirImg}`
+const fromServer1 = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
+const fromServer2 = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
 
 type Coords = { i: number; j: number }
 const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
@@ -240,7 +241,7 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
           border: isSelected ? 'solid 2px yellow' : undefined,
           ...dimensionProps,
         }}
-        src={fromServer(`${directory}/${filename}`)}
+        src={fromServer1(`${directory}/${filename}`)}
         data-left={props.left}
         data-center={`${directory}/${filename}`}
         data-right={props.right}
@@ -252,7 +253,6 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
 function ZoomView() {
   const styles = css({
     margin: 'auto',
-    position: 'relative',
     '&::backdrop': {
       backgroundColor: '#000000',
       opacity: '0.4',
@@ -313,7 +313,7 @@ function ZoomView() {
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      <img src={fromServer(modalUrl)} onClick={(e) => e.stopPropagation()}
+      <img src={fromServer2(modalUrl)} onClick={(e) => e.stopPropagation()}
         style={{ display: 'block' }} />
       <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
