@@ -1,6 +1,7 @@
 import { animated, useSpring } from '@react-spring/web'
 import type { Dispatch, MouseEventHandler, RefObject, SetStateAction } from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { TbCaretLeftFilled, TbCaretRightFilled } from 'react-icons/tb'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { trpc } from '../apis/queries'
@@ -120,9 +121,11 @@ type ImageProps = {
   height: number
   dateIso: string
   id: number
+  left: string | undefined
+  right: string | undefined
 }
 
-function Image({ directory, filename, width, height, dateIso, id }: ImageProps) {
+function Image({ directory, filename, width, height, dateIso, id, ...props }: ImageProps) {
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
   const { select, deselect, activate, setModalUrl } = useImageActions()
@@ -131,7 +134,7 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
   SPRINGS
   */
 
-  const [props, api] = useSpring(
+  const [dimensionProps, dimensionApi] = useSpring(
     () => ({
       from: { width: 125 * width, height: 125 * height },
     }),
@@ -159,8 +162,8 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
     }
 
     isSelected
-      ? api.start({ to: { width: 125 * width, height: 125 * height } })
-      : api.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
+      ? dimensionApi.start({ to: { width: 125 * width, height: 125 * height } })
+      : dimensionApi.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
   }
 
   const shortClickHandler = () => {
@@ -225,7 +228,7 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
           marginLeft: '4px',
           backgroundColor: 'black',
           ...{ opacity: isActive || isSelected ? .8 : opacityProps.opacity },
-          ...{ width: props.width },
+          ...{ width: dimensionProps.width },
           cursor: 'pointer',
           height: '1.5rem',
           fontSize: '.5rem',
@@ -237,9 +240,12 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
           margin: '4px',
           objectFit: 'cover',
           border: isSelected ? 'solid 2px yellow' : undefined,
-          ...props,
+          ...dimensionProps,
         }}
         src={fromServer(directory, filename)}
+        data-left={props.left}
+        data-center={`${directory}/${filename}`}
+        data-right={props.right}
         title={dateIso} />
     </animated.div>
   )
@@ -252,6 +258,22 @@ function ZoomView() {
       backgroundColor: '#000000',
       opacity: '0.4',
     },
+    '& main': {
+      position: 'relative',
+      '& section': {
+        width: '20%',
+        height: '100%',
+        position: 'absolute',
+        _hover: {
+          backgroundColor: 'black',
+          opacity: '0.2',
+        },
+      },
+      '& section:nth-child(3)': {
+        left: '80%',
+        top: '0',
+      },
+    },
   })
 
   const url = useImageStore((store) => store.modalUrl)
@@ -259,16 +281,32 @@ function ZoomView() {
 
   const ref = useRef<HTMLDialogElement>(null)
 
+  // next and prev buttons
+  // document.querySelector('img[data-left="2024-01/explorer_8jDKbQmkid.png"]')
+  // document.querySelector('img[data-right="2024-01/explorer_8jDKbQmkid.png"]')
+
+  // const leftHandler = () => {
+  //   console.log('LEFT CLICKED')
+  // }
+
+  // const rightHandler = () => {
+  //   console.log('RIGHT CLICKED')
+  // }
+
   useEffect(() => {
     if (!ref || url == '') return
     ref.current?.showModal()
-    console.log('LOADING ZOOM VIEW')
+    console.log(`modal: ${url}`)
   }, [url])
 
   return (
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
-      <img src={url} onClick={(e) => e.stopPropagation()} />
+      <main>
+        <section onClick={(e) => (console.log('LEFT'), e.stopPropagation())} />
+        <img src={url} onClick={(e) => e.stopPropagation()} style={{ display: 'block' }} />
+        <section onClick={(e) => (console.log('RIGHT'), e.stopPropagation())} />
+      </main>
     </dialog>
   )
 }
@@ -318,7 +356,16 @@ export default function Images() {
     }),
   }
 
-  // onClick={() => deactivate()}
+  const getNear = <T extends { directory: string; filename: string }>(arr: T[], ind: number) => {
+    const left = arr.at(ind - 1)
+    const right = arr.at(ind + 1)
+
+    return {
+      left: left && `${left.directory}/${left.filename}`,
+      right: right && `${right.directory}/${right.filename}`,
+    }
+  }
+
   return (
     <div className={styles.container}>
       <div>
@@ -332,7 +379,9 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image) => <Image {...image} key={image.id} />)}
+                  {processedImages.map((image, ind, arr) => (
+                    <Image key={image.id} {...image} {...getNear(arr, ind)} />
+                  ))}
                 </div>
               </Fragment>
             )
