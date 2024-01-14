@@ -1,13 +1,12 @@
 import { animated, useSpring } from '@react-spring/web'
-import type { Dispatch, MouseEventHandler, RefObject, SetStateAction } from 'react'
+import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { TbCaretLeftFilled, TbCaretRightFilled } from 'react-icons/tb'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { trpc } from '../apis/queries'
 import { css } from '../styled-system/css'
 
-const fromServer = (dir: string, img: string) => `http://localhost:3000/${dir}/${img}`
+const fromServer = (dirImg: string) => `http://localhost:3000/${dirImg}`
 
 type Coords = { i: number; j: number }
 const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
@@ -172,14 +171,13 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
   }
 
   const headerClickHandler = () => {
-    setModalUrl(fromServer(directory, filename))
+    setModalUrl(`${directory}/${filename}`)
   }
 
   /*
   MOUSE EVENTS
   */
 
-  // const longPressProps = useShortLongClick(longClickHandler, shortClickHandler, 500, opacityApi)
   const [startLongPress, setStartLongPress] = useState(false)
   const LONG_CLICK_MS = 500
 
@@ -242,7 +240,7 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
           border: isSelected ? 'solid 2px yellow' : undefined,
           ...dimensionProps,
         }}
-        src={fromServer(directory, filename)}
+        src={fromServer(`${directory}/${filename}`)}
         data-left={props.left}
         data-center={`${directory}/${filename}`}
         data-right={props.right}
@@ -276,36 +274,29 @@ function ZoomView() {
     },
   })
 
-  const url = useImageStore((store) => store.modalUrl)
+  const modalUrl = useImageStore((store) => store.modalUrl)
   const { setModalUrl } = useImageActions()
 
   const ref = useRef<HTMLDialogElement>(null)
 
-  // next and prev buttons
-  // document.querySelector('img[data-left="2024-01/explorer_8jDKbQmkid.png"]')
-  // document.querySelector('img[data-right="2024-01/explorer_8jDKbQmkid.png"]')
-
-  // const leftHandler = () => {
-  //   console.log('LEFT CLICKED')
-  // }
-
-  // const rightHandler = () => {
-  //   console.log('RIGHT CLICKED')
-  // }
+  const [{ left, right }, setLinks] = useState<{ left?: string; right?: string }>({})
 
   useEffect(() => {
-    if (!ref || url == '') return
+    if (!ref || modalUrl == '') return
     ref.current?.showModal()
-    console.log(`modal: ${url}`)
-  }, [url])
+    console.log(`modal: ${modalUrl}`)
+    const img = document.querySelector<HTMLImageElement>(`img[data-center="${modalUrl}"]`)
+    setLinks({ left: img?.dataset?.left, right: img?.dataset?.right })
+  }, [modalUrl])
 
   return (
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <main>
-        <section onClick={(e) => (console.log('LEFT'), e.stopPropagation())} />
-        <img src={url} onClick={(e) => e.stopPropagation()} style={{ display: 'block' }} />
-        <section onClick={(e) => (console.log('RIGHT'), e.stopPropagation())} />
+        <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
+        <img src={fromServer(modalUrl)} onClick={(e) => e.stopPropagation()}
+          style={{ display: 'block' }} />
+        <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
       </main>
     </dialog>
   )
@@ -313,7 +304,6 @@ function ZoomView() {
 
 export default function Images() {
   const { ref, inView } = useInView()
-  // const { deactivate } = useImageActions()
 
   const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = trpc.infinitePosts
     .useInfiniteQuery({}, {
