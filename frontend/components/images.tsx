@@ -1,7 +1,6 @@
 import { animated, useSpring } from '@react-spring/web'
-import type { SpringRef } from '@react-spring/web'
-import { Fragment, useEffect, useState, useTransition } from 'react'
-import type { CSSProperties, Dispatch, MouseEventHandler, SetStateAction } from 'react'
+import type { Dispatch, MouseEventHandler, RefObject, SetStateAction } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { trpc } from '../apis/queries'
@@ -59,10 +58,12 @@ const getAspect = (aspect: number) => {
 }
 
 type SelectedImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
-interface ImageSelectionStore {
+interface ImageStore {
   selected: SelectedImage[]
   active: SelectedImage | null
+  modalUrl: string
   actions: {
+    setModalUrl: (url: string) => void
     activate: (selectedImage: SelectedImage) => void
     deactivate: () => void
     select: (selectedImage: SelectedImage) => void
@@ -71,11 +72,16 @@ interface ImageSelectionStore {
   }
 }
 
-const useImageSelectionStore = create<ImageSelectionStore>()(
+const useImageStore = create<ImageStore>()(
   (set) => ({
     selected: [],
     active: null,
+    modalUrl: '',
     actions: {
+      setModalUrl: (url) =>
+        set((state) => {
+          return ({ modalUrl: url })
+        }),
       activate: (active) =>
         set((state) => {
           // if there is an existing selection (and it differs from incoming one), deselect it first
@@ -104,8 +110,8 @@ const useImageSelectionStore = create<ImageSelectionStore>()(
   }),
 )
 
-export const useImageSelection = () => useImageSelectionStore((state) => state.selected)
-export const useImageActions = () => useImageSelectionStore((state) => state.actions)
+export const useImageSelection = () => useImageStore((state) => state.selected)
+export const useImageActions = () => useImageStore((state) => state.actions)
 
 type ImageProps = {
   directory: string
@@ -119,7 +125,7 @@ type ImageProps = {
 function Image({ directory, filename, width, height, dateIso, id }: ImageProps) {
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
-  const { select, deselect, activate, deactivate } = useImageActions()
+  const { select, deselect, activate, setModalUrl } = useImageActions()
 
   /*
   SPRINGS
@@ -163,8 +169,7 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
   }
 
   const headerClickHandler = () => {
-    console.log(`OPEN IMAGE`)
-    
+    setModalUrl(fromServer(directory, filename))
   }
 
   /*
@@ -206,7 +211,7 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
     setStartLongPress(false)
   }
 
-  const longPressProps = { onMouseUp,  onMouseDown, onMouseEnter, onMouseLeave }
+  const longPressProps = { onMouseUp, onMouseDown, onMouseEnter, onMouseLeave }
 
   return (
     <animated.div {...longPressProps} style={{
@@ -240,8 +245,37 @@ function Image({ directory, filename, width, height, dateIso, id }: ImageProps) 
   )
 }
 
+function ZoomView() {
+  const styles = css({
+    margin: 'auto',
+    '&::backdrop': {
+      backgroundColor: '#000000',
+      opacity: '0.4',
+    },
+  })
+
+  const url = useImageStore((store) => store.modalUrl)
+  const { setModalUrl } = useImageActions()
+
+  const ref = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    if (!ref || url == '') return
+    ref.current?.showModal()
+    console.log('LOADING ZOOM VIEW')
+  }, [url])
+
+  return (
+    <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
+      onClick={(e) => e.currentTarget.close()}>
+      <img src={url} onClick={(e) => e.stopPropagation()} />
+    </dialog>
+  )
+}
+
 export default function Images() {
   const { ref, inView } = useInView()
+  // const { deactivate } = useImageActions()
 
   const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = trpc.infinitePosts
     .useInfiniteQuery({}, {
@@ -283,6 +317,8 @@ export default function Images() {
       borderTop: 'solid white',
     }),
   }
+
+  // onClick={() => deactivate()}
   return (
     <div className={styles.container}>
       <div>
@@ -307,6 +343,8 @@ export default function Images() {
         <h3>This is a footer</h3>
         {isFetchingNextPage && <p>... loading ...</p>}
       </div>
+
+      <ZoomView />
     </div>
   )
 }
