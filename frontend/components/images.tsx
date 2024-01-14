@@ -252,25 +252,27 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
 function ZoomView() {
   const styles = css({
     margin: 'auto',
+    position: 'relative',
     '&::backdrop': {
       backgroundColor: '#000000',
       opacity: '0.4',
     },
-    '& main': {
-      position: 'relative',
-      '& section': {
-        width: '20%',
-        height: '100%',
-        position: 'absolute',
-        _hover: {
-          backgroundColor: 'black',
-          opacity: '0.2',
-        },
+    '& section': {
+      width: '20%',
+      height: '100vh',
+      position: 'fixed',
+      cursor: 'pointer',
+      left: '0',
+      top: '0',
+      _hover: {
+        backgroundColor: 'black',
+        opacity: '0.3',
+        transition: 'background-color 300ms ease-in-out',
       },
-      '& section:nth-child(3)': {
-        left: '80%',
-        top: '0',
-      },
+    },
+    '& section:nth-child(3)': {
+      left: '80%',
+      top: '0',
     },
   })
 
@@ -284,20 +286,36 @@ function ZoomView() {
   useEffect(() => {
     if (!ref || modalUrl == '') return
     ref.current?.showModal()
-    console.log(`modal: ${modalUrl}`)
     const img = document.querySelector<HTMLImageElement>(`img[data-center="${modalUrl}"]`)
     setLinks({ left: img?.dataset?.left, right: img?.dataset?.right })
   }, [modalUrl])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // console.log(`pressed: ${e.key}: left=${left} right=${right}`)
+      switch (e.key) {
+        case 'ArrowRight':
+          right && setModalUrl(right)
+          break
+        case 'ArrowLeft':
+          left && setModalUrl(left)
+          break
+        default:
+          return
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [left, right])
+
   return (
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
-      <main>
-        <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-        <img src={fromServer(modalUrl)} onClick={(e) => e.stopPropagation()}
-          style={{ display: 'block' }} />
-        <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
-      </main>
+      <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
+      <img src={fromServer(modalUrl)} onClick={(e) => e.stopPropagation()}
+        style={{ display: 'block' }} />
+      <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
   )
 }
