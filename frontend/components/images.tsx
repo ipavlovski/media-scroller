@@ -162,7 +162,7 @@ function Image(imageProps: ImageProps) {
   }
 
   const shortClickHandler = () => {
-    console.log(`clicked on: ${id}, ${props.metadata.map(v => v.content).join(', ')} `)
+    console.log(`clicked on: ${id}, ${props.metadata.map((v) => v.content).join(', ')} `)
     setActive(true)
     activate({ id, setter: setActive })
   }
@@ -309,8 +309,7 @@ function ZoomView() {
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()}
-        style={{ display: 'block' }} />
+      {modalUrl != '' && <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()} />}
       <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
   )

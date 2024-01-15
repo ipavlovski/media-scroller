@@ -59,7 +59,7 @@ export const Dialog = forwardRef<DialogProps,
       }))
 
       useEffect(() => {
-        console.log(`${containerRef.current?.getBoundingClientRect().top}px`)
+        // console.log(`${containerRef.current?.getBoundingClientRect().top}px`)
         setTop(containerRef.current?.getBoundingClientRect().top)
       }, [containerRef.current?.getBoundingClientRect().top])
 
