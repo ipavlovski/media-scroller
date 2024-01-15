@@ -64,7 +64,7 @@ export const appRouter = router({
     return await meta.create(content, imageIds)
   }),
 
-  infinitePosts: t.procedure.input(
+  infiniteImages: t.procedure.input(
     z.object({
       cursor: z.preprocess((val) => {
         console.log(`cursor is ${val}`)

@@ -3,7 +3,7 @@ import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
-import { useInfiniteImages } from '../apis/queries'
+import { InfiniteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
 
 const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
@@ -114,18 +114,12 @@ const useImageStore = create<ImageStore>()(
 export const useImageSelection = () => useImageStore((state) => state.selected)
 export const useImageActions = () => useImageStore((state) => state.actions)
 
-type ImageProps = {
-  directory: string
-  filename: string
-  width: number
-  height: number
-  dateIso: string
-  id: number
-  left: string | undefined
-  right: string | undefined
-}
-
-function Image({ directory, filename, width, height, dateIso, id, ...props }: ImageProps) {
+type ImageProps =
+  & InfiniteImages['items'][0]['images'][0]
+  & { width: number; height: number }
+  & { left: string | undefined; right: string | undefined }
+function Image(imageProps: ImageProps) {
+  const { directory, filename, width, height, dateIso, id, ...props } = imageProps
 
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
@@ -168,7 +162,7 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
   }
 
   const shortClickHandler = () => {
-    // console.log(`clicked on: ${id}, ${props.} `)
+    console.log(`clicked on: ${id}, ${props.metadata.map(v => v.content).join(', ')} `)
     setActive(true)
     activate({ id, setter: setActive })
   }

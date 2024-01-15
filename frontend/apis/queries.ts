@@ -1,5 +1,7 @@
 import { createTRPCReact } from '@trpc/react-query'
+import { inferRouterOutputs } from '@trpc/server'
 import type { AppRouter } from '../../backend/router'
+type RouterOutput = inferRouterOutputs<AppRouter>
 
 export const trpc = createTRPCReact<AppRouter>()
 
@@ -8,11 +10,13 @@ IMAGES
 */
 
 export const useInfiniteImages = () =>
-  trpc.infinitePosts
+  trpc.infiniteImages
     .useInfiniteQuery({}, {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       initialCursor: new Date().toISOString().substring(0, 10),
     })
+
+export type InfiniteImages = RouterOutput['infiniteImages']
 
 /*
 CATEGORIES
