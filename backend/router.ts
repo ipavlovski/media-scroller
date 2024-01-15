@@ -72,9 +72,7 @@ export const appRouter = router({
       }, z.string().length(10)),
     }),
   ).query(async ({ input: { cursor } }) => {
-    console.log(`receving this cursor: ${cursor}`)
     const { items, nextCursor } = await image.queryPaginatedByDate(cursor)
-    console.log(`sending back nextCursor: ${nextCursor}`)
 
     return {
       items,

@@ -4,6 +4,17 @@ import type { AppRouter } from '../../backend/router'
 export const trpc = createTRPCReact<AppRouter>()
 
 /*
+IMAGES
+*/
+
+export const useInfiniteImages = () =>
+  trpc.infinitePosts
+    .useInfiniteQuery({}, {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      initialCursor: new Date().toISOString().substring(0, 10),
+    })
+
+/*
 CATEGORIES
 */
 

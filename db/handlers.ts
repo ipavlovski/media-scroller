@@ -32,10 +32,23 @@ async function queryPaginatedById(limit: number, cursor: number) {
 }
 
 async function queryByStartEndDate(startDate: string, endDate: string) {
-  return await db.select().from(images)
-    .where(between(images.dateAgg, startDate, endDate))
-    .orderBy(desc(images.dateIso))
+  // return await db.select().from(images)
+  //   .where(between(images.dateAgg, startDate, endDate))
+  //   .orderBy(desc(images.dateIso))
+
+  return await db.query.images.findMany({
+    with: { imagesToTags: true, metadata: true },
+    where: between(images.dateAgg, startDate, endDate),
+    orderBy: desc(images.dateIso),
+  })
+
 }
+
+
+
+
+
+
 
 async function queryPaginatedByDate(endDate: string) {
   // get all the aggregated data by day, before or on the provided day:

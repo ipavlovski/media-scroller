@@ -1,13 +1,13 @@
 import { animated, useSpring } from '@react-spring/web'
-import type { Dispatch, MouseEventHandler, ReactNode, SetStateAction } from 'react'
+import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
-import { trpc } from '../apis/queries'
+import { useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
 
-const fromServer1 = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
-const fromServer2 = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
+const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
+const fromServerFull = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
 
 type Coords = { i: number; j: number }
 const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
@@ -126,6 +126,7 @@ type ImageProps = {
 }
 
 function Image({ directory, filename, width, height, dateIso, id, ...props }: ImageProps) {
+
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
   const { select, deselect, activate, setModalUrl } = useImageActions()
@@ -167,6 +168,7 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
   }
 
   const shortClickHandler = () => {
+    // console.log(`clicked on: ${id}, ${props.} `)
     setActive(true)
     activate({ id, setter: setActive })
   }
@@ -241,7 +243,7 @@ function Image({ directory, filename, width, height, dateIso, id, ...props }: Im
           border: isSelected ? 'solid 2px yellow' : undefined,
           ...dimensionProps,
         }}
-        src={fromServer1(`${directory}/${filename}`)}
+        src={fromServerThumb(`${directory}/${filename}`)}
         data-left={props.left}
         data-center={`${directory}/${filename}`}
         data-right={props.right}
@@ -313,7 +315,7 @@ function ZoomView() {
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      <img src={fromServer2(modalUrl)} onClick={(e) => e.stopPropagation()}
+      <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()}
         style={{ display: 'block' }} />
       <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
@@ -323,11 +325,7 @@ function ZoomView() {
 export default function Images() {
   const { ref, inView } = useInView()
 
-  const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = trpc.infinitePosts
-    .useInfiniteQuery({}, {
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
-      initialCursor: new Date().toISOString().substring(0, 10),
-    })
+  const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteImages()
 
   useEffect(() => {
     if (inView && hasNextPage) fetchNextPage()
@@ -364,7 +362,6 @@ export default function Images() {
     }),
   }
 
-
   let left: string | undefined = undefined
   let center: string | undefined = undefined
 
@@ -382,7 +379,6 @@ export default function Images() {
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
                   {processedImages.map((image, ind) => {
-
                     // try to get the 'next' item (in a triple-nested data-structure)
                     let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(ind + 1)
                     nextItem ??= data?.pages.at(pageInd)?.items.at(dateInd + 1)?.images.at(0)
