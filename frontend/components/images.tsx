@@ -58,14 +58,21 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
-type SelectedImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
+export type SelectedImage = {
+  id: number
+  tagIds: number[]
+  categoryId: number | null
+  metadata: string[]
+  setter: Dispatch<SetStateAction<boolean>>
+}
+type ActiveImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
 interface ImageStore {
   selected: SelectedImage[]
-  active: SelectedImage | null
+  active: ActiveImage | null
   modalUrl: string
   actions: {
     setModalUrl: (url: string) => void
-    activate: (selectedImage: SelectedImage) => void
+    activate: (activeImage: ActiveImage) => void
     deactivate: () => void
     select: (selectedImage: SelectedImage) => void
     deselect: (id: number) => void
@@ -118,8 +125,8 @@ type ImageProps =
   & InfiniteImages['items'][0]['images'][0]
   & { width: number; height: number }
   & { left: string | undefined; right: string | undefined }
-function Image(imageProps: ImageProps) {
-  const { directory, filename, width, height, dateIso, id, ...props } = imageProps
+function Image(image: ImageProps) {
+  const { directory, filename, width, height, dateIso, id, ...props } = image
 
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
@@ -150,7 +157,13 @@ function Image(imageProps: ImageProps) {
   const longClickHandler = () => {
     if (!isSelected) {
       setSelected(true)
-      select({ id, setter: setSelected })
+      select({
+        id,
+        setter: setSelected,
+        categoryId: image.categoryId,
+        tagIds: image.imagesToTags.map((v) => v.tagId),
+        metadata: image.metadata.flatMap((f) => f.content ? [f.content] : []),
+      })
     } else {
       setSelected(false)
       deselect(id)
@@ -309,7 +322,8 @@ function ZoomView() {
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      {modalUrl != '' && <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()} />}
+      {modalUrl != '' && <img src={fromServerFull(modalUrl)}
+        onClick={(e) => e.stopPropagation()} />}
       <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
   )

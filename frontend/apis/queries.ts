@@ -16,6 +16,11 @@ export const useInfiniteImages = () =>
       initialCursor: new Date().toISOString().substring(0, 10),
     })
 
+
+
+
+
+    
 export type InfiniteImages = RouterOutput['infiniteImages']
 
 /*
@@ -55,3 +60,6 @@ export const useCreateTag = () => {
     return createTag.mutateAsync({ name })
   }
 }
+
+export type Tags = RouterOutput['getTags']
+

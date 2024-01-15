@@ -1,11 +1,11 @@
-import { useRef } from 'react'
+import { MouseEventHandler, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
-import { useCategories, useCreateCategory, useCreateTag, useTags } from '../apis/queries'
+import { Tags, useCategories, useCreateCategory, useCreateTag, useTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
-import { useImageActions, useImageSelection } from './images'
+import { SelectedImage, useImageActions, useImageSelection } from './images'
 
 function Divider({ text }: { text: string }) {
   const styles = css({
@@ -56,11 +56,68 @@ function CategoryResults() {
     : <p>No categories.</p>
 }
 
+function TagItem({ tag }: { tag: TagWithSelection }) {
+  const styles = css({
+    display: 'flex',
+    alignItems: 'center',
+    paddingRight: '1rem',
+    '& span': {
+      width: '1.1rem',
+      height: '1.1rem',
+      display: 'block',
+      fontSize: '.8rem',
+      backgroundColor: 'slate.100',
+      borderRadius: '1.1rem',
+      color: 'slate.900',
+      textAlign: 'center',
+      lineHeight: '1rem',
+      marginLeft: 'auto',
+      cursor: 'pointer',
+    },
+  })
+
+  const onClick: MouseEventHandler = (e) => {
+    if (e.shiftKey) console.log('shift key pressed')
+    console.log(`this is tag: ${tag.id} ${tag.name}`)
+  }
+
+  const len = tag.imageIds.length
+
+  return (
+    <div className={styles}>
+      <p key={tag.id}>{tag.name}</p>
+      <span
+        title={'click to add all\nshift+click to subtract all'}
+        onClick={onClick}
+        style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
+        {len > 0 ? len : `+`}
+      </span>
+    </div>
+  )
+}
+
+const groupImagesByTags = (imageSelection: SelectedImage[]) => {
+  const tagAgg: { [key: number]: number[] } = {}
+  imageSelection.forEach(({ id: imageId, tagIds }) => {
+    tagIds.forEach((tagId) => ((tagAgg[tagId] ??= []), tagAgg[tagId].push(imageId)))
+  })
+  return Object.entries(tagAgg)
+    .map(([tagId, imageIds]) => ({ tagId: parseInt(tagId), imageIds, count: imageIds.length }))
+}
+
+type TagWithSelection = Tags[0] & { imageIds: number[] }
 function TagResults() {
-  const { data, isSuccess } = useTags()
-  return data?.length
-    ? data?.map((v) => <p key={v.id}>{v.name}</p>)
-    : <p>No tags.</p>
+  const { data: tags, isSuccess } = useTags()
+  const imageSelection = useImageSelection()
+
+  // need 3 sections: default/pinned, selected, general
+  const tagsWithSelection = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] })) ?? []
+  groupImagesByTags(imageSelection).forEach(({ tagId, imageIds }) => {
+    const match = tagsWithSelection?.find((tag) => tag.id == tagId)
+    if (match) match.imageIds = imageIds
+  })
+
+  return tagsWithSelection.map((tag) => <TagItem tag={tag} key={tag.id} />)
 }
 
 function MetadataDivider() {
@@ -100,7 +157,13 @@ function ImageCounter() {
 
   const imageSelection = useImageSelection()
   const { deselectAll } = useImageActions()
-  return <div className={styles} onClick={() => deselectAll()}>{imageSelection.length}</div>
+  return (
+    <div className={styles}
+      style={{ backgroundColor: imageSelection.length > 0 ? 'yellow' : undefined }}
+      onClick={() => deselectAll()}>
+      {imageSelection.length}
+    </div>
+  )
 }
 
 function SearchBar() {
