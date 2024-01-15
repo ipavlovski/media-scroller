@@ -5,9 +5,7 @@ type RouterOutput = inferRouterOutputs<AppRouter>
 
 export const trpc = createTRPCReact<AppRouter>()
 
-/*
-IMAGES
-*/
+/* IMAGES */
 
 export const useInfiniteImages = () =>
   trpc.infiniteImages
@@ -16,16 +14,22 @@ export const useInfiniteImages = () =>
       initialCursor: new Date().toISOString().substring(0, 10),
     })
 
+export const useUpdateImageTags = () => {
+  const utils = trpc.useUtils()
+  const updateImages = trpc.updateImages.useMutation({
+    // onSuccess: () => {
+    //   utils.getCategories.invalidate()
+    // },
+  })
 
+  return async (tagId: number, imageIds: number[]) => {
+    return updateImages.mutateAsync({ tagId, imageIds })
+  }
+}
 
-
-
-    
 export type InfiniteImages = RouterOutput['infiniteImages']
 
-/*
-CATEGORIES
-*/
+/* CATEGORIES */
 
 export const useCategories = () => trpc.getCategories.useQuery()
 
@@ -42,9 +46,7 @@ export const useCreateCategory = () => {
   }
 }
 
-/*
-TAGS
-*/
+/* TAGS */
 
 export const useTags = () => trpc.getTags.useQuery()
 
@@ -62,4 +64,3 @@ export const useCreateTag = () => {
 }
 
 export type Tags = RouterOutput['getTags']
-

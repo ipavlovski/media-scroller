@@ -1,31 +1,11 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
-// import { queryPaginatedById, queryPaginatedByDate, getTags, createTag, getCategories  } from '../db/handlers'
 import { category, image, meta, tag } from '../db/handlers'
 
 const t = initTRPC.create()
 const router = t.router
 
-// async function getTags(name: string) {
-//   console.log('GETTING TAGS')
-//   await new Promise((resolve) => setTimeout(resolve, 1000))
-
-//   return { name: `queried tag: ${name}` }
-// }
-
-// async function createTag(name: string) {
-//   console.log('CREATING TAGS')
-//   await new Promise((resolve) => setTimeout(resolve, 1000))
-//   return { name: `new tag: ${name}` }
-// }
-
 export const appRouter = router({
-  // getTags: t.procedure.input(
-  //   z.object({ name: z.string() }),
-  // ).query(async ({ input: { name } }) => {
-  //   return await tag.get()
-  // }),
-
   getTags: t.procedure.query(async () => {
     return await tag.get()
   }),
@@ -35,12 +15,6 @@ export const appRouter = router({
   ).mutation(async ({ input: { name } }) => {
     return await tag.create(name)
   }),
-
-  // getCategories: t.procedure.input(
-  //   z.object({ name: z.string() }),
-  // ).query(async ({ input: { name } }) => {
-  //   return await category.get()
-  // }),
 
   getCategories: t.procedure.query(async () => {
     return await category.get()
@@ -79,6 +53,13 @@ export const appRouter = router({
       nextCursor,
     }
   }),
+
+  updateImages: t.procedure.input(
+    z.object({ tagId: z.number(), imageIds: z.number().array() }),
+  ).mutation(async ({ input: { tagId, imageIds } }) => {
+    return await image.updateTags(tagId, imageIds)
+  }),
+
 })
 
 export type AppRouter = typeof appRouter

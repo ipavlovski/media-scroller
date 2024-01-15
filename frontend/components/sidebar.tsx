@@ -1,11 +1,13 @@
 import { MouseEventHandler, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
-import { Tags, useCategories, useCreateCategory, useCreateTag, useTags } from '../apis/queries'
+import { Tags, useCategories, useCreateCategory, useCreateTag, useTags,
+  useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
 import { SelectedImage, useImageActions, useImageSelection } from './images'
+import { useToast } from './toast'
 
 function Divider({ text }: { text: string }) {
   const styles = css({
@@ -56,42 +58,44 @@ function CategoryResults() {
     : <p>No categories.</p>
 }
 
-function TagItem({ tag }: { tag: TagWithSelection }) {
-  const styles = css({
-    display: 'flex',
-    alignItems: 'center',
-    paddingRight: '1rem',
-    '& span': {
-      width: '1.1rem',
-      height: '1.1rem',
-      display: 'block',
-      fontSize: '.8rem',
-      backgroundColor: 'slate.100',
-      borderRadius: '1.1rem',
-      color: 'slate.900',
-      textAlign: 'center',
-      lineHeight: '1rem',
-      marginLeft: 'auto',
-      cursor: 'pointer',
-    },
-  })
+function TagItem({ tag, inSelectionMode }: { tag: TagWithSelection; inSelectionMode: boolean }) {
+  const updateImageTags = useUpdateImageTags()
+  const { error, success } = useToast()
+  const { getSelected } = useImageActions()
 
-  const onClick: MouseEventHandler = (e) => {
+  const onClick: MouseEventHandler = async (e) => {
     if (e.shiftKey) console.log('shift key pressed')
-    console.log(`this is tag: ${tag.id} ${tag.name}`)
+    console.log(`Adding a tag ${tag.name} to multiple images: ${tag.imageIds.join(', ')}`)
+
+    try {
+      const imageIds = getSelected().map(v => v.id)
+      console.log(`calling assignment with tagId:${tag.id} and imageIds: ${imageIds.join(',')}`)
+      const result = await updateImageTags(tag.id, imageIds)
+      success(`Created: ${result}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error.'
+      error(msg)
+    }
   }
 
   const len = tag.imageIds.length
 
+  const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
+    '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
+      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900', textAlign: 'center',
+      lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
+
   return (
     <div className={styles}>
       <p key={tag.id}>{tag.name}</p>
-      <span
-        title={'click to add all\nshift+click to subtract all'}
-        onClick={onClick}
-        style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
-        {len > 0 ? len : `+`}
-      </span>
+      {inSelectionMode && (
+        <span
+          title={'click to add all\nshift+click to subtract all'}
+          onClick={onClick}
+          style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
+          {len > 0 ? len : `+`}
+        </span>
+      )}
     </div>
   )
 }
@@ -101,8 +105,7 @@ const groupImagesByTags = (imageSelection: SelectedImage[]) => {
   imageSelection.forEach(({ id: imageId, tagIds }) => {
     tagIds.forEach((tagId) => ((tagAgg[tagId] ??= []), tagAgg[tagId].push(imageId)))
   })
-  return Object.entries(tagAgg)
-    .map(([tagId, imageIds]) => ({ tagId: parseInt(tagId), imageIds, count: imageIds.length }))
+  return Object.entries(tagAgg).map(([tagId, imageIds]) => ({ tagId: parseInt(tagId), imageIds }))
 }
 
 type TagWithSelection = Tags[0] & { imageIds: number[] }
@@ -117,7 +120,9 @@ function TagResults() {
     if (match) match.imageIds = imageIds
   })
 
-  return tagsWithSelection.map((tag) => <TagItem tag={tag} key={tag.id} />)
+  return tagsWithSelection.map((tag) => {
+    return <TagItem tag={tag} key={tag.id} inSelectionMode={imageSelection.length > 0} />
+  })
 }
 
 function MetadataDivider() {

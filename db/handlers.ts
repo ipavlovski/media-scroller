@@ -41,14 +41,7 @@ async function queryByStartEndDate(startDate: string, endDate: string) {
     where: between(images.dateAgg, startDate, endDate),
     orderBy: desc(images.dateIso),
   })
-
 }
-
-
-
-
-
-
 
 async function queryPaginatedByDate(endDate: string) {
   // get all the aggregated data by day, before or on the provided day:
@@ -93,6 +86,15 @@ async function queryPaginatedByDate(endDate: string) {
   }
 }
 
+async function updateImageTags(tagId: number, imageIds: number[]) {
+
+  const values = imageIds.map((imageId) => ({ tagId, imageId }))
+
+  const { changes } = await db.insert(imagesToTags).values(values).onConflictDoNothing()
+
+  return changes
+}
+
 async function getCategories() {
   return await db.select().from(categories)
 }
@@ -116,7 +118,6 @@ async function getTags() {
 }
 
 async function createTag(name: string) {
-
   if (name.includes('lol')) throw new Error('NOT GOOD ENOUGH.')
 
   const { lastInsertRowid } = await db.insert(tags).values({ name })
@@ -131,7 +132,6 @@ async function deleteTags(name: string) {
 
   return deletedIds
 }
-
 
 async function getMetadata(imageId: number) {
   return await db.select().from(metadata).where(eq(metadata.imageId, imageId))
@@ -177,4 +177,5 @@ export const meta = {
 
 export const image = {
   queryPaginatedByDate,
+  updateTags: updateImageTags
 }

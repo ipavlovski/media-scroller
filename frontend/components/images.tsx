@@ -75,13 +75,14 @@ interface ImageStore {
     activate: (activeImage: ActiveImage) => void
     deactivate: () => void
     select: (selectedImage: SelectedImage) => void
+    getSelected: () => SelectedImage[]
     deselect: (id: number) => void
     deselectAll: () => void
   }
 }
 
 const useImageStore = create<ImageStore>()(
-  (set) => ({
+  (set, get) => ({
     selected: [],
     active: null,
     modalUrl: '',
@@ -103,6 +104,7 @@ const useImageStore = create<ImageStore>()(
           return ({ active: null })
         }),
       select: (selection) => set((state) => ({ selected: [...state.selected, selection] })),
+      getSelected: () => get().selected,
       deselect: (id) =>
         set((state) => {
           const item = state.selected.find((item) => item.id == id)
