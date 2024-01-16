@@ -1,6 +1,7 @@
 import { createTRPCReact } from '@trpc/react-query'
 import { inferRouterOutputs } from '@trpc/server'
 import type { AppRouter } from '../../backend/router'
+import { useImageActions } from '../components/images'
 type RouterOutput = inferRouterOutputs<AppRouter>
 
 export const trpc = createTRPCReact<AppRouter>()
@@ -15,11 +16,16 @@ export const useInfiniteImages = () =>
     })
 
 export const useUpdateImageTags = () => {
-  const utils = trpc.useUtils()
+  const { updateSelected } = useImageActions()
+
   const updateImages = trpc.updateImages.useMutation({
-    // onSuccess: () => {
-    //   utils.getCategories.invalidate()
-    // },
+    onSuccess: (data) => {
+      if (data.length == 0) return
+      const tagId = data[0].tagId
+      const imageIds = data.map((v) => v.imageId)
+      updateSelected({ type: 'tag', imageIds, tagId })
+
+    },
   })
 
   return async (tagId: number, imageIds: number[]) => {

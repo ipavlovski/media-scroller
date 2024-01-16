@@ -87,10 +87,11 @@ async function queryPaginatedByDate(endDate: string) {
 }
 
 async function updateImageTags(tagId: number, imageIds: number[]) {
-
   const values = imageIds.map((imageId) => ({ tagId, imageId }))
-
-  const { changes } = await db.insert(imagesToTags).values(values).onConflictDoNothing()
+  const changes = await db.insert(imagesToTags)
+    .values(values)
+    .onConflictDoNothing()
+    .returning({ imageId: imagesToTags.imageId, tagId: imagesToTags.tagId })
 
   return changes
 }
@@ -177,5 +178,5 @@ export const meta = {
 
 export const image = {
   queryPaginatedByDate,
-  updateTags: updateImageTags
+  updateTags: updateImageTags,
 }

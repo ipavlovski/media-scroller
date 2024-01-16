@@ -65,7 +65,12 @@ export type SelectedImage = {
   metadata: string[]
   setter: Dispatch<SetStateAction<boolean>>
 }
+
 type ActiveImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
+type SelectionUpdate =
+  | { type: 'tag'; tagId: number; imageIds: number[] }
+  | { type: 'category'; categoryId: number; imageIds: number[] }
+
 interface ImageStore {
   selected: SelectedImage[]
   active: ActiveImage | null
@@ -76,6 +81,7 @@ interface ImageStore {
     deactivate: () => void
     select: (selectedImage: SelectedImage) => void
     getSelected: () => SelectedImage[]
+    updateSelected: (props: SelectionUpdate) => void
     deselect: (id: number) => void
     deselectAll: () => void
   }
@@ -105,6 +111,26 @@ const useImageStore = create<ImageStore>()(
         }),
       select: (selection) => set((state) => ({ selected: [...state.selected, selection] })),
       getSelected: () => get().selected,
+      updateSelected: (props) =>
+        set((state) => {
+          const updateType = props.type
+          switch (updateType) {
+            case 'category':
+              console.log('not finished yet...')
+              return ({ selected: state.selected })
+            case 'tag':
+              const { imageIds, tagId } = props
+              const selected = state.selected.map((selectedImage) => {
+                const match = imageIds.find((updateImageId) => updateImageId == selectedImage.id)
+                if (match) selectedImage.tagIds.push(tagId)
+                return selectedImage
+              })
+              return ({ selected })
+            default:
+              updateType satisfies never
+              return ({ selected: state.selected })
+          }
+        }),
       deselect: (id) =>
         set((state) => {
           const item = state.selected.find((item) => item.id == id)
