@@ -91,9 +91,17 @@ async function updateImageTags(tagId: number, imageIds: number[]) {
   const changes = await db.insert(imagesToTags)
     .values(values)
     .onConflictDoNothing()
-    .returning({ imageId: imagesToTags.imageId, tagId: imagesToTags.tagId })
+    .returning({ imageId: imagesToTags.imageId })
 
-  return changes
+  // need to do these shanenigans to return dateAgg, which will help rapidly index cached queries
+  // instead of iterating over each page->date->image like a savage, could quickly find page->date
+  // and skip over all page->dates which are not in the dateAgg updateImageRows
+  const updatedImageIds = changes.map((v) => v.imageId)
+  const updatedImageRows = await db.select({ imageId: images.id, dateAgg: images.dateAgg })
+    .from(images)
+    .where(inArray(images.id, updatedImageIds))
+
+  return { tagId, images: updatedImageRows }
 }
 
 async function getCategories() {

@@ -71,7 +71,7 @@ function TagItem({ tag, inSelectionMode }: { tag: TagWithSelection; inSelectionM
       const imageIds = getSelected().map(v => v.id)
       console.log(`calling assignment with tagId:${tag.id} and imageIds: ${imageIds.join(',')}`)
       const result = await updateImageTags(tag.id, imageIds)
-      success(`Created: ${result}`)
+      success(`Updated ${result.images?.length || 0} images with ${tag.name}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error.'
       error(msg)

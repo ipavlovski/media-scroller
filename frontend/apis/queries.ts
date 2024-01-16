@@ -15,16 +15,44 @@ export const useInfiniteImages = () =>
       initialCursor: new Date().toISOString().substring(0, 10),
     })
 
+/* TAGS */
+
 export const useUpdateImageTags = () => {
   const { updateSelected } = useImageActions()
+  const utils = trpc.useUtils()
 
   const updateImages = trpc.updateImages.useMutation({
     onSuccess: (data) => {
-      if (data.length == 0) return
-      const tagId = data[0].tagId
-      const imageIds = data.map((v) => v.imageId)
+      if (!data?.images?.length) return
+
+      // update selection
+      const { images: updatedImages, tagId } = data
+      const imageIds = updatedImages.map((v) => v.imageId)
       updateSelected({ type: 'tag', imageIds, tagId })
 
+      // update query cache
+      // note - is this really faster? maybe just invalidate ALL, let it rerender on its own
+      utils.infiniteImages.setInfiniteData({}, (data) => {
+        if (!data) return { pages: [], pageParams: [] }
+
+        const tagAgg: { [key: string]: number[] } = {}
+        updatedImages.forEach(({ imageId, dateAgg }) => {
+          tagAgg[dateAgg] ??= []
+          tagAgg[dateAgg].push(imageId)
+        })
+
+        Object.entries(tagAgg).forEach(([dateAgg, imageIds]) => {
+          data.pages.forEach(({ items }) =>
+            items.forEach(({ date, images }) => {
+              date == dateAgg && imageIds.forEach((imageId) =>
+                images.find((image) => image.id == imageId)?.imagesToTags.push({ imageId, tagId })
+              )
+            })
+          )
+        })
+
+        return { ...data }
+      })
     },
   })
 
