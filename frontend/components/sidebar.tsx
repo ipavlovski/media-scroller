@@ -1,10 +1,8 @@
 import { MouseEventHandler, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
-import { image } from '../../db/handlers'
 import { Categories, Tags, useCategories, useCreateCategory, useCreateTag, useTags,
-  useUpdateImageCategories,
-  useUpdateImageTags } from '../apis/queries'
+  useUpdateImageCategories, useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
@@ -57,7 +55,7 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
     try {
       const imageIds = getSelected().map((v) => v.id)
       console.log(
-        `calling assignment with tagId:${id} and imageIds: ${imageIds.join(',')}`,
+        `calling assignment with categories:${id} and imageIds: ${imageIds.join(',')}`,
       )
       const result = await updateImageCategories(id, imageIds)
       success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
@@ -65,8 +63,6 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
       const msg = err instanceof Error ? err.message : 'Unknown error.'
       error(msg)
     }
-
-
   }
 
   return (
@@ -167,7 +163,7 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
         `calling assignment with tagId:${id} and imageIds: ${imageIds.join(',')}`,
       )
       const result = await updateImageTags(id, imageIds)
-      
+
       success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error.'

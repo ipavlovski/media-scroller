@@ -94,7 +94,7 @@ const useUpdateImages = () => {
           cachedData.pages.forEach(({ items }) =>
             items.forEach(({ date, images }) => {
               date == dateAgg && imageIds.forEach((imageId) => {
-                const image = images.find((image) => image.id == imageId)
+                let image = images.find((image) => image.id == imageId)
 
                 switch (type) {
                   case 'tag':
@@ -102,15 +102,17 @@ const useUpdateImages = () => {
                     break
                   case 'category':
                     console.log('SHOULD UPDATE CATEGORY...')
-                    console.dir(`id1: ${image?.categoryId}, id2: ${queryData.categoryId}`)
-                    if (image != null) image.categoryId = queryData.categoryId
+                    if (image != null) {
+                      image = { ...image, categoryId: queryData.categoryId }
+                    }
+
                     break
                 }
               })
             })
           )
         )
-        return { ...cachedData }
+        return { ...cachedData, pages: cachedData.pages }
       })
     },
   })
