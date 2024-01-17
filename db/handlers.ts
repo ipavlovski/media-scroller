@@ -6,31 +6,6 @@ import * as schema from './schema'
 const db = drizzle(new Database('./db/sqlite.db'), { schema })
 const { images, tags, categories, metadata, imagesToTags } = schema
 
-db.select().from(images).all()
-
-type createImageRecordProps = {
-  directory: string
-  filename: string
-  aspect: 1 | 2 | 3 | 4
-  format: string
-  size: number
-  createdAt: Date
-  isoDate: string
-}
-async function createImageRecord(props: createImageRecordProps) {
-  const { lastInsertRowid } = await db.insert(images).values(props)
-
-  return lastInsertRowid
-}
-
-async function queryPaginatedById(limit: number, cursor: number) {
-  return await db.select()
-    .from(images)
-    .orderBy(desc(images.id))
-    .limit(limit)
-    .where(gt(images.id, cursor))
-}
-
 async function queryByStartEndDate(startDate: string, endDate: string) {
   // return await db.select().from(images)
   //   .where(between(images.dateAgg, startDate, endDate))
@@ -78,7 +53,9 @@ async function queryPaginatedByDate(endDate: string) {
   }, {})
 
   // convert the group-by object into iteratable array, sorted by key
-  const arrByDate = Object.entries(objByDate).map(([key, val]) => ({ date: key, images: val }))
+  const arrByDate = Object.entries(objByDate).map(([key, val]) => ({ date: key,
+    images: val })
+  )
 
   return {
     nextCursor: cursor,
@@ -97,7 +74,8 @@ async function updateImageTags(tagId: number, imageIds: number[]) {
   // instead of iterating over each page->date->image like a savage, could quickly find page->date
   // and skip over all page->dates which are not in the dateAgg updateImageRows
   const updatedImageIds = changes.map((v) => v.imageId)
-  const updatedImageRows = await db.select({ imageId: images.id, dateAgg: images.dateAgg })
+  const updatedImageRows = await db.select({ imageId: images.id,
+    dateAgg: images.dateAgg })
     .from(images)
     .where(inArray(images.id, updatedImageIds))
 
@@ -115,9 +93,10 @@ async function createCategory(name: string) {
 }
 
 async function deleteCategories(name: string) {
-  const deletedIds = await db.delete(categories).where(eq(categories.name, name)).returning({
-    deletedId: categories.id,
-  })
+  const deletedIds = await db.delete(categories).where(eq(categories.name, name))
+    .returning({
+      deletedId: categories.id,
+    })
 
   return deletedIds
 }
@@ -147,7 +126,9 @@ async function getMetadata(imageId: number) {
 }
 
 async function createMetadata(content: string, imageIds: number[]) {
-  const matchingImages = await db.select().from(images).where(inArray(images.id, imageIds))
+  const matchingImages = await db.select().from(images).where(
+    inArray(images.id, imageIds),
+  )
 
   let total = 0
   for (const image of matchingImages) {
@@ -159,9 +140,10 @@ async function createMetadata(content: string, imageIds: number[]) {
 }
 
 async function deleteMetadata(metadataId: number) {
-  const deletedIds = await db.delete(metadata).where(eq(metadata.id, metadataId)).returning({
-    deletedId: metadata.id,
-  })
+  const deletedIds = await db.delete(metadata).where(eq(metadata.id, metadataId))
+    .returning({
+      deletedId: metadata.id,
+    })
 
   return deletedIds
 }

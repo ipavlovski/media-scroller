@@ -1,14 +1,14 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { trpcServer } from '@hono/trpc-server'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import fs from 'node:fs/promises'
 import { z } from 'zod'
 import * as schema from '../db/schema'
 import { appRouter } from './router'
-import { trpcServer } from '@hono/trpc-server'
-import { cors } from 'hono/cors'
 
 const app = new Hono()
 app.use('/trpc/*', cors())
@@ -24,12 +24,12 @@ const reqSchema = z.object({
 
 // http://localhost:3000/2023-12/6Qaa3wstCP.png
 // app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareX/' }))
-app.use('/thumbs/*', serveStatic({ 
+app.use('/thumbs/*', serveStatic({
   root: '../../../../../mnt/c/Users/IP/Pictures/ShareThumbs/',
   rewriteRequestPath: (path) => path.replace(/^\/thumbs/, '/'),
 }))
 
-app.use('/full/*', serveStatic({ 
+app.use('/full/*', serveStatic({
   root: '../../../../../mnt/c/Users/IP/Pictures/ShareX/',
   rewriteRequestPath: (path) => path.replace(/^\/full/, '/'),
 }))
@@ -73,7 +73,7 @@ app.use(
   '/trpc/*',
   trpcServer({
     router: appRouter,
-  })
+  }),
 )
 
 const server = serve({ fetch: app.fetch, port })

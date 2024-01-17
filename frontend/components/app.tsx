@@ -7,7 +7,6 @@ import Sidebar from './sidebar'
 import { Toaster } from './toast'
 
 export default function App() {
-  
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [

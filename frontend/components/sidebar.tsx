@@ -58,7 +58,9 @@ function CategoryResults() {
     : <p>No categories.</p>
 }
 
-function TagItem({ tag, inSelectionMode }: { tag: TagWithSelection; inSelectionMode: boolean }) {
+function TagItem(
+  { tag, inSelectionMode }: { tag: TagWithSelection; inSelectionMode: boolean },
+) {
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
@@ -68,8 +70,10 @@ function TagItem({ tag, inSelectionMode }: { tag: TagWithSelection; inSelectionM
     console.log(`Adding a tag ${tag.name} to multiple images: ${tag.imageIds.join(', ')}`)
 
     try {
-      const imageIds = getSelected().map(v => v.id)
-      console.log(`calling assignment with tagId:${tag.id} and imageIds: ${imageIds.join(',')}`)
+      const imageIds = getSelected().map((v) => v.id)
+      console.log(
+        `calling assignment with tagId:${tag.id} and imageIds: ${imageIds.join(',')}`,
+      )
       const result = await updateImageTags(tag.id, imageIds)
       success(`Updated ${result.images?.length || 0} images with ${tag.name}`)
     } catch (err) {
@@ -82,8 +86,8 @@ function TagItem({ tag, inSelectionMode }: { tag: TagWithSelection; inSelectionM
 
   const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
     '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
-      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900', textAlign: 'center',
-      lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
+      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900',
+      textAlign: 'center', lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
 
   return (
     <div className={styles}>
@@ -105,7 +109,9 @@ const groupImagesByTags = (imageSelection: SelectedImage[]) => {
   imageSelection.forEach(({ id: imageId, tagIds }) => {
     tagIds.forEach((tagId) => ((tagAgg[tagId] ??= []), tagAgg[tagId].push(imageId)))
   })
-  return Object.entries(tagAgg).map(([tagId, imageIds]) => ({ tagId: parseInt(tagId), imageIds }))
+  return Object.entries(tagAgg).map(([tagId, imageIds]) => ({ tagId: parseInt(tagId),
+    imageIds })
+  )
 }
 
 type TagWithSelection = Tags[0] & { imageIds: number[] }
@@ -114,7 +120,8 @@ function TagResults() {
   const imageSelection = useImageSelection()
 
   // need 3 sections: default/pinned, selected, general
-  const tagsWithSelection = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] })) ?? []
+  const tagsWithSelection = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] }))
+    ?? []
   groupImagesByTags(imageSelection).forEach(({ tagId, imageIds }) => {
     const match = tagsWithSelection?.find((tag) => tag.id == tagId)
     if (match) match.imageIds = imageIds

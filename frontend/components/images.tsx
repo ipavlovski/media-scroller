@@ -18,7 +18,8 @@ const prepImages = <T extends { width: number; height: number }>(images: T[]) =>
 
   for (const color of images) {
     // check item to the right (not beyond grid boundary, and not obstructed from above/right)
-    const isWidthOK = color.width == 1 || (coords.j + 2 <= max && grid[coords.i]![coords.j + 1]!)
+    const isWidthOK = color.width == 1
+      || (coords.j + 2 <= max && grid[coords.i]![coords.j + 1]!)
     if (!isWidthOK) color.width = 1
 
     // insert item
@@ -100,7 +101,8 @@ const useImageStore = create<ImageStore>()(
       activate: (active) =>
         set((state) => {
           // if there is an existing selection (and it differs from incoming one), deselect it first
-          state.active != null && state.active.id != active.id && state.active.setter(false)
+          state.active != null && state.active.id != active.id
+            && state.active.setter(false)
           return ({ active })
         }),
       deactivate: () =>
@@ -109,7 +111,8 @@ const useImageStore = create<ImageStore>()(
           state.active != null && state.active.setter(false)
           return ({ active: null })
         }),
-      select: (selection) => set((state) => ({ selected: [...state.selected, selection] })),
+      select: (selection) =>
+        set((state) => ({ selected: [...state.selected, selection] })),
       getSelected: () => get().selected,
       updateSelected: (props) =>
         set((state) => {
@@ -121,7 +124,9 @@ const useImageStore = create<ImageStore>()(
             case 'tag':
               const { imageIds, tagId } = props
               const selected = state.selected.map((selectedImage) => {
-                const match = imageIds.find((updateImageId) => updateImageId == selectedImage.id)
+                const match = imageIds.find((updateImageId) =>
+                  updateImageId == selectedImage.id
+                )
                 if (match) selectedImage.tagIds.push(tagId)
                 return selectedImage
               })
@@ -199,7 +204,9 @@ function Image(image: ImageProps) {
 
     isSelected
       ? dimensionApi.start({ to: { width: 125 * width, height: 125 * height } })
-      : dimensionApi.start({ to: { width: (125 * width) - 5, height: (125 * height) - 5 } })
+      : dimensionApi.start({
+        to: { width: (125 * width) - 5, height: (125 * height) - 5 },
+      })
   }
 
   const shortClickHandler = () => {
@@ -221,7 +228,9 @@ function Image(image: ImageProps) {
 
   useEffect(() => {
     let timerId: NodeJS.Timeout | undefined
-    startLongPress ? timerId = setTimeout(longClickHandler, LONG_CLICK_MS) : clearTimeout(timerId)
+    startLongPress
+      ? timerId = setTimeout(longClickHandler, LONG_CLICK_MS)
+      : clearTimeout(timerId)
 
     return () => clearTimeout(timerId)
   }, [startLongPress])
@@ -350,8 +359,9 @@ function ZoomView() {
     <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
       onClick={(e) => e.currentTarget.close()}>
       <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      {modalUrl != '' && <img src={fromServerFull(modalUrl)}
-        onClick={(e) => e.stopPropagation()} />}
+      {modalUrl != '' && (
+        <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()} />
+      )}
       <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
     </dialog>
   )
@@ -360,7 +370,8 @@ function ZoomView() {
 export default function Images() {
   const { ref, inView } = useInView()
 
-  const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteImages()
+  const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteImages()
 
   useEffect(() => {
     if (inView && hasNextPage) fetchNextPage()
@@ -415,14 +426,19 @@ export default function Images() {
                 <div className={styles.grid}>
                   {processedImages.map((image, ind) => {
                     // try to get the 'next' item (in a triple-nested data-structure)
-                    let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(ind + 1)
-                    nextItem ??= data?.pages.at(pageInd)?.items.at(dateInd + 1)?.images.at(0)
+                    let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
+                      ind + 1,
+                    )
+                    nextItem ??= data?.pages.at(pageInd)?.items.at(dateInd + 1)?.images
+                      .at(0)
                     nextItem ??= data?.pages.at(pageInd + 1)?.items.at(0)?.images.at(0)
                     const right = nextItem && `${nextItem.directory}/${nextItem.filename}`
 
                     // make the current item 'last', and then refresh the current one
                     left = center
-                    const item = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(ind)
+                    const item = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
+                      ind,
+                    )
                     center = item && `${item.directory}/${item.filename}`
 
                     return <Image key={image.id} {...image} left={left} right={right} />

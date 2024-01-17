@@ -45,7 +45,8 @@ export const useUpdateImageTags = () => {
           data.pages.forEach(({ items }) =>
             items.forEach(({ date, images }) => {
               date == dateAgg && imageIds.forEach((imageId) =>
-                images.find((image) => image.id == imageId)?.imagesToTags.push({ imageId, tagId })
+                images.find((image) => image.id == imageId)?.imagesToTags.push({ imageId,
+                  tagId })
               )
             })
           )

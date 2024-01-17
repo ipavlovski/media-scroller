@@ -1,4 +1,5 @@
-import { CSSProperties, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { CSSProperties, forwardRef, useEffect, useImperativeHandle, useRef,
+  useState } from 'react'
 import { IconType } from 'react-icons'
 import { BsCheckCircleFill } from 'react-icons/bs'
 import { css } from '../styled-system/css'
@@ -47,7 +48,7 @@ export const Dialog = forwardRef<DialogProps,
 
       const [, setTop] = useState<number | undefined>(0)
 
-      const { error, success } = useToast()   
+      const { error, success } = useToast()
 
       useImperativeHandle(ref, () => ({
         get dialogRef() {
@@ -71,18 +72,19 @@ export const Dialog = forwardRef<DialogProps,
       return (
         <div ref={containerRef} className={styles}>
           <props.icon size={'1.5rem'} onClick={() => dialogRef.current?.showModal()} />
-          <dialog ref={dialogRef} onClick={(e) => e.currentTarget.close()} style={dialogOffsets}
-            onClose={() => {
-              const input = dialogRef.current?.querySelector('input')
-              if (input != null) input.value = ''
-            }}>
+          <dialog ref={dialogRef} onClick={(e) => e.currentTarget.close()}
+            style={dialogOffsets} onClose={() => {
+            const input = dialogRef.current?.querySelector('input')
+            if (input != null) input.value = ''
+          }}>
             <main onClick={(e) => e.stopPropagation()}>
               <input type='text' autoFocus={true} />
               <BsCheckCircleFill
                 onClick={async () => {
                   try {
                     const value = dialogRef.current?.querySelector('input')?.value
-                    const result = (value != null && value.length > 0) && await props.action(value)
+                    const result = (value != null && value.length > 0)
+                      && await props.action(value)
                     success(`Created: ${result}`)
                     dialogRef.current?.close()
                   } catch (err) {
