@@ -5,6 +5,7 @@ import { trpc } from '../apis/queries'
 import Images from './images'
 import Sidebar from './sidebar'
 import { Toaster } from './toast'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 export default function App() {
   const [trpcClient] = useState(() =>
@@ -33,6 +34,7 @@ export default function App() {
         <Sidebar />
         <Images />
         <Toaster />
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </trpc.Provider>
   )
