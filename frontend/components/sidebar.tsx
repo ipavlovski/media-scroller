@@ -1,7 +1,8 @@
 import { MouseEventHandler, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
-import { Tags, useCategories, useCreateCategory, useCreateTag, useTags,
+import { image } from '../../db/handlers'
+import { Categories, Tags, useCategories, useCreateCategory, useCreateTag, useTags,
   useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
@@ -25,6 +26,87 @@ function Divider({ text }: { text: string }) {
   )
 }
 
+//  ===========================
+//           CATEGORIES
+//  ===========================
+
+type CategoryItemProps = Categories[0] & { imageIds: number[] }
+
+function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }) {
+  const { category: { id, name, imageIds }, selActive } = props
+
+  const len = imageIds.length
+
+  const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
+    '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
+      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900',
+      textAlign: 'center', lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
+
+  const onClick: MouseEventHandler = async (e) => {
+    if (e.shiftKey) console.log('shift key pressed')
+    console.log(`Adding a category ${name} to multiple images: ${imageIds.join(', ')}`)
+  }
+
+  return (
+    <div className={styles}>
+      <p key={id}>{name}</p>
+      {selActive && (
+        <span
+          title={'click to add all\nshift+click to subtract all'}
+          onClick={onClick}
+          style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
+          {len > 0 ? len : `+`}
+        </span>
+      )}
+    </div>
+  )
+}
+
+const groupSelectionByCategories = (imageSelection: SelectedImage[]) => {
+  const categoryAgg: { [key: number]: number[] } = {}
+  imageSelection.forEach(({ id: imageId, categoryId }) => {
+    categoryId ??= 0
+    categoryAgg[categoryId] ??= []
+    categoryAgg[categoryId].push(imageId)
+  })
+  return Object.entries(categoryAgg).map(([categoryId, imageIds]) => ({
+    categoryId: parseInt(categoryId),
+    imageIds,
+  }))
+}
+
+function CategoryResults() {
+  const { data: categories, isSuccess } = useCategories()
+  const imageSelection = useImageSelection()
+
+  const defaultCategory = {
+    id: 0,
+    name: 'Uncategorized',
+    description: 'Generated category',
+    createdAt: '',
+    color: 'teal',
+    imageIds: [],
+  } satisfies CategoryItemProps
+
+  const allCategories = categories?.map((category) => ({
+    ...category,
+    imageIds: [] as number[],
+  })) ?? []
+  allCategories.push(defaultCategory)
+
+  groupSelectionByCategories(imageSelection).forEach(({ categoryId, imageIds }) => {
+    const match = allCategories?.find((category) => category.id == categoryId)
+    if (match) match.imageIds = imageIds
+  })
+
+  return allCategories.map((category) => {
+    return (
+      <CategoryItem category={category} key={category.id}
+        selActive={imageSelection.length > 0} />
+    )
+  })
+}
+
 function CategoriesDivider() {
   const ref = useRef<DialogProps>(null)
 
@@ -38,28 +120,14 @@ function CategoriesDivider() {
   )
 }
 
-function TagsDivider() {
-  const ref = useRef<DialogProps>(null)
+//  ===========================
+//              TAGS
+//  ===========================
 
-  const createTag = useCreateTag()
-
-  return (
-    <Flex mt={'2rem'} align={'center'}>
-      <Divider text='Tags' />
-      <Dialog ref={ref} icon={TbTagStarred} action={createTag} />
-    </Flex>
-  )
-}
-
-function CategoryResults() {
-  const { data, isSuccess } = useCategories()
-  return data?.length
-    ? data?.map((v) => <p key={v.id}>{v.name}</p>)
-    : <p>No categories.</p>
-}
+type TagItemProps = Tags[0] & { imageIds: number[] }
 
 function TagItem(
-  { tag, inSelectionMode }: { tag: TagWithSelection; inSelectionMode: boolean },
+  { tag, inSelectionMode }: { tag: TagItemProps; inSelectionMode: boolean },
 ) {
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
@@ -104,7 +172,7 @@ function TagItem(
   )
 }
 
-const groupImagesByTags = (imageSelection: SelectedImage[]) => {
+const groupSelectionByTags = (imageSelection: SelectedImage[]) => {
   const tagAgg: { [key: number]: number[] } = {}
   imageSelection.forEach(({ id: imageId, tagIds }) => {
     tagIds.forEach((tagId) => ((tagAgg[tagId] ??= []), tagAgg[tagId].push(imageId)))
@@ -114,7 +182,6 @@ const groupImagesByTags = (imageSelection: SelectedImage[]) => {
   )
 }
 
-type TagWithSelection = Tags[0] & { imageIds: number[] }
 function TagResults() {
   const { data: tags, isSuccess } = useTags()
   const imageSelection = useImageSelection()
@@ -122,7 +189,7 @@ function TagResults() {
   // need 3 sections: default/pinned, selected, general
   const tagsWithSelection = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] }))
     ?? []
-  groupImagesByTags(imageSelection).forEach(({ tagId, imageIds }) => {
+  groupSelectionByTags(imageSelection).forEach(({ tagId, imageIds }) => {
     const match = tagsWithSelection?.find((tag) => tag.id == tagId)
     if (match) match.imageIds = imageIds
   })
@@ -131,6 +198,23 @@ function TagResults() {
     return <TagItem tag={tag} key={tag.id} inSelectionMode={imageSelection.length > 0} />
   })
 }
+
+function TagsDivider() {
+  const ref = useRef<DialogProps>(null)
+
+  const createTag = useCreateTag()
+
+  return (
+    <Flex mt={'2rem'} align={'center'}>
+      <Divider text='Tags' />
+      <Dialog ref={ref} icon={TbTagStarred} action={createTag} />
+    </Flex>
+  )
+}
+
+//  ===========================
+//           METADATA
+//  ===========================
 
 function MetadataDivider() {
   const styles = css({
@@ -153,6 +237,10 @@ function MetadataDivider() {
 function MetadataResults() {
   return <h3>metadata results</h3>
 }
+
+//  ===========================
+//           SEARCHBAR
+//  ===========================
 
 function ImageCounter() {
   const styles = css({

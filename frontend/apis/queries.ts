@@ -81,6 +81,9 @@ export const useCreateCategory = () => {
   }
 }
 
+export type Categories = RouterOutput['getCategories']
+
+
 /* TAGS */
 
 export const useTags = () => trpc.getTags.useQuery()
