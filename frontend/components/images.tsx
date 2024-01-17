@@ -118,10 +118,18 @@ const useImageStore = create<ImageStore>()(
         set((state) => {
           const updateType = props.type
           switch (updateType) {
-            case 'category':
-              console.log('not finished yet...')
-              return ({ selected: state.selected })
-            case 'tag':
+            case 'category': {
+              const { imageIds, categoryId } = props
+              const selected = state.selected.map((selectedImage) => {
+                const match = imageIds.find((updateImageId) =>
+                  updateImageId == selectedImage.id
+                )
+                if (match) selectedImage.categoryId = categoryId
+                return selectedImage
+              })
+              return ({ selected })
+            }
+            case 'tag': {
               const { imageIds, tagId } = props
               const selected = state.selected.map((selectedImage) => {
                 const match = imageIds.find((updateImageId) =>
@@ -131,6 +139,7 @@ const useImageStore = create<ImageStore>()(
                 return selectedImage
               })
               return ({ selected })
+            }
             default:
               updateType satisfies never
               return ({ selected: state.selected })

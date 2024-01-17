@@ -54,12 +54,46 @@ export const appRouter = router({
     }
   }),
 
-  updateImages: t.procedure.input(
-    z.object({ tagId: z.number(), imageIds: z.number().array() }),
-  ).mutation(async ({ input: { tagId, imageIds } }) => {
-    return await image.updateTags(tagId, imageIds)
-  }),
-
+  updateImages: t.procedure
+    .input(
+      z.discriminatedUnion('type', [
+        z.object({
+          type: z.literal('tag'),
+          tagId: z.number(),
+          imageIds: z.number().array(),
+        }),
+        z.object({
+          type: z.literal('category'),
+          categoryId: z.number(),
+          imageIds: z.number().array(),
+        }),
+      ]),
+    ).output(
+      z.discriminatedUnion('type', [
+        z.object({
+          type: z.literal('tag'),
+          tagId: z.number(),
+          updateRecords: z.object({ dateAgg: z.string(), imageId: z.number() }).array(),
+        }),
+        z.object({
+          type: z.literal('category'),
+          categoryId: z.number(),
+          updateRecords: z.object({ dateAgg: z.string(), imageId: z.number() }).array(),
+        }),
+      ]),
+    )
+    .mutation(async ({ input }) => {
+      const inputType = input.type
+      switch (inputType) {
+        case 'category':
+          return await image.updateCategories(input.categoryId, input.imageIds)
+        case 'tag':
+          return await image.updateTags(input.tagId, input.imageIds)
+        default:
+          inputType satisfies never
+          throw new Error(`Type ${inputType} had no backend handler`)
+      }
+    }),
 })
 
 export type AppRouter = typeof appRouter

@@ -3,6 +3,7 @@ import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
 import { image } from '../../db/handlers'
 import { Categories, Tags, useCategories, useCreateCategory, useCreateTag, useTags,
+  useUpdateImageCategories,
   useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
@@ -34,8 +35,11 @@ type CategoryItemProps = Categories[0] & { imageIds: number[] }
 
 function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }) {
   const { category: { id, name, imageIds }, selActive } = props
-
   const len = imageIds.length
+
+  const updateImageCategories = useUpdateImageCategories()
+  const { error, success } = useToast()
+  const { getSelected } = useImageActions()
 
   const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
     '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
@@ -45,6 +49,24 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
   const onClick: MouseEventHandler = async (e) => {
     if (e.shiftKey) console.log('shift key pressed')
     console.log(`Adding a category ${name} to multiple images: ${imageIds.join(', ')}`)
+    if (id == 0) {
+      console.log('Cant add category with undefined.')
+      return
+    }
+
+    try {
+      const imageIds = getSelected().map((v) => v.id)
+      console.log(
+        `calling assignment with tagId:${id} and imageIds: ${imageIds.join(',')}`,
+      )
+      const result = await updateImageCategories(id, imageIds)
+      success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error.'
+      error(msg)
+    }
+
+
   }
 
   return (
@@ -76,7 +98,7 @@ const groupSelectionByCategories = (imageSelection: SelectedImage[]) => {
 }
 
 function CategoryResults() {
-  const { data: categories, isSuccess } = useCategories()
+  const { data: categories } = useCategories()
   const imageSelection = useImageSelection()
 
   const defaultCategory = {
@@ -88,10 +110,7 @@ function CategoryResults() {
     imageIds: [],
   } satisfies CategoryItemProps
 
-  const allCategories = categories?.map((category) => ({
-    ...category,
-    imageIds: [] as number[],
-  })) ?? []
+  const allCategories = categories?.map((c) => ({ ...c, imageIds: [] as number[] })) ?? []
   allCategories.push(defaultCategory)
 
   groupSelectionByCategories(imageSelection).forEach(({ categoryId, imageIds }) => {
@@ -126,31 +145,35 @@ function CategoriesDivider() {
 
 type TagItemProps = Tags[0] & { imageIds: number[] }
 
-function TagItem(
-  { tag, inSelectionMode }: { tag: TagItemProps; inSelectionMode: boolean },
-) {
+function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) {
+  const { id, name, imageIds } = tag
+  const len = imageIds.length
+
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
 
   const onClick: MouseEventHandler = async (e) => {
     if (e.shiftKey) console.log('shift key pressed')
-    console.log(`Adding a tag ${tag.name} to multiple images: ${tag.imageIds.join(', ')}`)
+    console.log(`Adding a tag ${name} to multiple images: ${imageIds.join(', ')}`)
+    if (id == 0) {
+      console.log('Cant add tag with undefined.')
+      return
+    }
 
     try {
       const imageIds = getSelected().map((v) => v.id)
       console.log(
-        `calling assignment with tagId:${tag.id} and imageIds: ${imageIds.join(',')}`,
+        `calling assignment with tagId:${id} and imageIds: ${imageIds.join(',')}`,
       )
-      const result = await updateImageTags(tag.id, imageIds)
-      success(`Updated ${result.images?.length || 0} images with ${tag.name}`)
+      const result = await updateImageTags(id, imageIds)
+      
+      success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error.'
       error(msg)
     }
   }
-
-  const len = tag.imageIds.length
 
   const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
     '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
@@ -159,13 +182,16 @@ function TagItem(
 
   return (
     <div className={styles}>
-      <p key={tag.id}>{tag.name}</p>
-      {inSelectionMode && (
+      <p key={id}>{name}</p>
+      {selActive && (
         <span
           title={'click to add all\nshift+click to subtract all'}
           onClick={onClick}
-          style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
-          {len > 0 ? len : `+`}
+          style={{
+            backgroundColor: len > 0 ? 'yellow' : undefined,
+            cursor: id != 0 ? undefined : 'default',
+          }}>
+          {len > 0 ? len : id != 0 ? '+' : null}
         </span>
       )}
     </div>
@@ -175,27 +201,44 @@ function TagItem(
 const groupSelectionByTags = (imageSelection: SelectedImage[]) => {
   const tagAgg: { [key: number]: number[] } = {}
   imageSelection.forEach(({ id: imageId, tagIds }) => {
-    tagIds.forEach((tagId) => ((tagAgg[tagId] ??= []), tagAgg[tagId].push(imageId)))
+    // id=0 is the id of the default category
+    if (tagIds.length == 0) tagIds = [0]
+
+    return tagIds.forEach((tagId) => {
+      tagAgg[tagId] ??= []
+      tagAgg[tagId].push(imageId)
+    })
   })
-  return Object.entries(tagAgg).map(([tagId, imageIds]) => ({ tagId: parseInt(tagId),
-    imageIds })
-  )
+  return Object.entries(tagAgg).map(([tagId, imageIds]) => ({
+    tagId: parseInt(tagId),
+    imageIds,
+  }))
 }
 
 function TagResults() {
-  const { data: tags, isSuccess } = useTags()
+  const { data: tags } = useTags()
   const imageSelection = useImageSelection()
 
+  const defaultTag = {
+    id: 0,
+    name: 'Untagged',
+    description: 'Generated tag',
+    createdAt: '',
+    color: 'teal',
+    imageIds: [],
+  } satisfies TagItemProps
+
   // need 3 sections: default/pinned, selected, general
-  const tagsWithSelection = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] }))
-    ?? []
+  const allTags = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] })) ?? []
+  allTags.push(defaultTag)
+
   groupSelectionByTags(imageSelection).forEach(({ tagId, imageIds }) => {
-    const match = tagsWithSelection?.find((tag) => tag.id == tagId)
+    const match = allTags?.find((tag) => tag.id == tagId)
     if (match) match.imageIds = imageIds
   })
 
-  return tagsWithSelection.map((tag) => {
-    return <TagItem tag={tag} key={tag.id} inSelectionMode={imageSelection.length > 0} />
+  return allTags.map((tag) => {
+    return <TagItem tag={tag} key={tag.id} selActive={imageSelection.length > 0} />
   })
 }
 

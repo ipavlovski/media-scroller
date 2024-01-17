@@ -15,53 +15,6 @@ export const useInfiniteImages = () =>
       initialCursor: new Date().toISOString().substring(0, 10),
     })
 
-/* TAGS */
-
-export const useUpdateImageTags = () => {
-  const { updateSelected } = useImageActions()
-  const utils = trpc.useUtils()
-
-  const updateImages = trpc.updateImages.useMutation({
-    onSuccess: (data) => {
-      if (!data?.images?.length) return
-
-      // update selection
-      const { images: updatedImages, tagId } = data
-      const imageIds = updatedImages.map((v) => v.imageId)
-      updateSelected({ type: 'tag', imageIds, tagId })
-
-      // update query cache
-      // note - is this really faster? maybe just invalidate ALL, let it rerender on its own
-      utils.infiniteImages.setInfiniteData({}, (data) => {
-        if (!data) return { pages: [], pageParams: [] }
-
-        const tagAgg: { [key: string]: number[] } = {}
-        updatedImages.forEach(({ imageId, dateAgg }) => {
-          tagAgg[dateAgg] ??= []
-          tagAgg[dateAgg].push(imageId)
-        })
-
-        Object.entries(tagAgg).forEach(([dateAgg, imageIds]) => {
-          data.pages.forEach(({ items }) =>
-            items.forEach(({ date, images }) => {
-              date == dateAgg && imageIds.forEach((imageId) =>
-                images.find((image) => image.id == imageId)?.imagesToTags.push({ imageId,
-                  tagId })
-              )
-            })
-          )
-        })
-
-        return { ...data }
-      })
-    },
-  })
-
-  return async (tagId: number, imageIds: number[]) => {
-    return updateImages.mutateAsync({ tagId, imageIds })
-  }
-}
-
 export type InfiniteImages = RouterOutput['infiniteImages']
 
 /* CATEGORIES */
@@ -83,7 +36,6 @@ export const useCreateCategory = () => {
 
 export type Categories = RouterOutput['getCategories']
 
-
 /* TAGS */
 
 export const useTags = () => trpc.getTags.useQuery()
@@ -98,6 +50,130 @@ export const useCreateTag = () => {
 
   return async (name: string) => {
     return createTag.mutateAsync({ name })
+  }
+}
+
+/*
+  Handle 3 types of modifications: categories, tags, metadta
+*/
+const useUpdateImages = () => {
+  const { updateSelected } = useImageActions()
+  const utils = trpc.useUtils()
+
+  return trpc.updateImages.useMutation({
+    onSuccess: (queryData) => {
+      if (queryData == null || !queryData.updateRecords?.length) return
+      const { type, updateRecords } = queryData
+      const imageIds = updateRecords.map((v) => v.imageId)
+
+      /* STEP 1: PARTIAL SELECTION UPDATE */
+      // NOTE - actual handler logic is located in the store
+      //  implement it in there
+      switch (type) {
+        case 'tag':
+          updateSelected({ type, imageIds, tagId: queryData.tagId })
+          break
+        case 'category':
+          updateSelected({ type, imageIds, categoryId: queryData.categoryId })
+          break
+      }
+
+      /* STEP 2: PARTIAL CACHE UPDATE */
+      // NOTE - is this really faster?
+      //  maybe just invalidate ALL, let it rerender on its own
+      utils.infiniteImages.setInfiniteData({}, (cachedData) => {
+        if (!cachedData) return { pages: [], pageParams: [] }
+
+        const idAgg: { [key: string]: number[] } = {}
+        updateRecords.forEach(({ imageId, dateAgg }) => {
+          idAgg[dateAgg] ??= []
+          idAgg[dateAgg].push(imageId)
+        })
+
+        Object.entries(idAgg).forEach(([dateAgg, imageIds]) =>
+          cachedData.pages.forEach(({ items }) =>
+            items.forEach(({ date, images }) => {
+              date == dateAgg && imageIds.forEach((imageId) => {
+                const image = images.find((image) => image.id == imageId)
+
+                switch (type) {
+                  case 'tag':
+                    image?.imagesToTags.push({ imageId, tagId: queryData.tagId })
+                    break
+                  case 'category':
+                    console.log('SHOULD UPDATE CATEGORY...')
+                    console.dir(`id1: ${image?.categoryId}, id2: ${queryData.categoryId}`)
+                    if (image != null) image.categoryId = queryData.categoryId
+                    break
+                }
+              })
+            })
+          )
+        )
+        return { ...cachedData }
+      })
+    },
+  })
+}
+
+// export const useUpdateImageTags = () => {
+//   const { updateSelected } = useImageActions()
+//   const utils = trpc.useUtils()
+
+//   const updateImages = trpc.updateImages.useMutation({
+//     onSuccess: (data) => {
+//       if (!data?.images?.length) return
+
+//       // update selection
+//       const { images: updatedImages, tagId } = data
+//       const imageIds = updatedImages.map((v) => v.imageId)
+//       updateSelected({ type: 'tag', imageIds, tagId })
+
+//       // update query cache
+//       // note - is this really faster? maybe just invalidate ALL, let it rerender on its own
+//       utils.infiniteImages.setInfiniteData({}, (data) => {
+//         if (!data) return { pages: [], pageParams: [] }
+
+//         const tagAgg: { [key: string]: number[] } = {}
+//         updatedImages.forEach(({ imageId, dateAgg }) => {
+//           tagAgg[dateAgg] ??= []
+//           tagAgg[dateAgg].push(imageId)
+//         })
+
+//         Object.entries(tagAgg).forEach(([dateAgg, imageIds]) => {
+//           data.pages.forEach(({ items }) =>
+//             items.forEach(({ date, images }) => {
+//               date == dateAgg && imageIds.forEach((imageId) =>
+//                 images.find((image) => image.id == imageId)?.imagesToTags.push({ imageId,
+//                   tagId })
+//               )
+//             })
+//           )
+//         })
+
+//         return { ...data }
+//       })
+//     },
+//   })
+
+//   return async (tagId: number, imageIds: number[]) => {
+//     return updateImages.mutateAsync({ tagId, imageIds })
+//   }
+// }
+
+export const useUpdateImageTags = () => {
+  const updateImages = useUpdateImages()
+
+  return async (tagId: number, imageIds: number[]) => {
+    return updateImages.mutateAsync({ type: 'tag', tagId, imageIds })
+  }
+}
+
+export const useUpdateImageCategories = () => {
+  const updateImages = useUpdateImages()
+
+  return async (categoryId: number, imageIds: number[]) => {
+    return updateImages.mutateAsync({ type: 'category', categoryId, imageIds })
   }
 }
 

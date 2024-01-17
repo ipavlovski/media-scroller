@@ -79,7 +79,16 @@ async function updateImageTags(tagId: number, imageIds: number[]) {
     .from(images)
     .where(inArray(images.id, updatedImageIds))
 
-  return { tagId, images: updatedImageRows }
+  return { type: 'tag' as const, tagId, updateRecords: updatedImageRows }
+}
+
+async function updateImageCategories(categoryId: number, imageIds: number[]) {
+  const updatedImageCategories = await db.update(images)
+    .set({ categoryId })
+    .where(inArray(images.id, imageIds))
+    .returning({ imageId: images.id, dateAgg: images.dateAgg })
+
+  return { type: 'category' as const, categoryId, updateRecords: updatedImageCategories }
 }
 
 async function getCategories() {
@@ -169,4 +178,5 @@ export const meta = {
 export const image = {
   queryPaginatedByDate,
   updateTags: updateImageTags,
+  updateCategories: updateImageCategories,
 }
