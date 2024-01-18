@@ -1,10 +1,3 @@
-# Media Database
+# Media Scroller
 
-```
-bun install
-bun run dev
-```
-
-```
-open http://localhost:3000
-```
+Stay stuned.
