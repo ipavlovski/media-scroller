@@ -421,6 +421,17 @@ export default function Images() {
   let left: string | undefined = undefined
   let center: string | undefined = undefined
 
+  // const processFilters = <T extends { id: number }>(images: T[]) => {
+  //   let filtered: T[]
+
+  //   if (categories.length > 0)
+
+  //   filtered = images.filter((image) => {
+  //     let categoryId = image.categoryId || 0
+  //     return categories.includes(categoryId)
+  //   })
+  // }
+
   return (
     <div className={styles.container}>
       <div>
@@ -430,15 +441,30 @@ export default function Images() {
               images.map((v) => ({ ...v, ...getAspect(v.aspect) })),
             )
 
-            const hasFilters = categories.length > 0
-              || tags.length > 0
-              || metadata.length > 0
-            const filteredImages = hasFilters
-              ? processedImages.filter((image) => {
-                let categoryId = image.categoryId || 0
-                return categories.includes(categoryId)
+            let filteredImages = processedImages
+            if (categories.length > 0) {
+              filteredImages = filteredImages.filter((image) => {
+                // handle the 'uncategorized' condition
+                let imageCategoryId = image.categoryId || 0
+                return categories.includes(imageCategoryId)
               })
-              : processedImages
+            }
+
+            if (tags.length > 0) {
+              filteredImages = filteredImages.filter((image) => {
+                if (tags.includes(0) && image.imagesToTags.length == 0) return true
+                return image.imagesToTags.find((v) => tags.includes(v.tagId))
+              })
+            }
+
+            if (metadata.length > 0) {
+              filteredImages = filteredImages.filter((image) => {
+                let imageMetadata = image.metadata
+                return imageMetadata.find((datum) =>
+                  datum.content != null && metadata.includes(datum.content)
+                )
+              })
+            }
 
             return (
               <Fragment key={date}>

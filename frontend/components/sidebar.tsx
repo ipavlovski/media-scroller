@@ -172,7 +172,8 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
           title={'click to add all\nshift+click to subtract all'}
           onClick={onClickCount}
           style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
-          {len > 0 ? len : `+`}
+          {/* {len > 0 ? len : `+`} */}
+          {len > 0 ? len : id != 0 ? '+' : null}
         </span>
       )}
     </div>
@@ -247,8 +248,23 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
+  const filteredTags = useFilteredTags()
+  const { addFilter, removeFilter } = useSidebarActions()
 
-  const onClick: MouseEventHandler = async (e) => {
+  const isFiltered = filteredTags.includes(id)
+
+  const onClickName = () => {
+    if (selActive) return
+
+    const filter = {
+      type: 'tag',
+      tagId: id,
+    } satisfies Extract<Filter, { type: 'tag' }>
+
+    isFiltered ? removeFilter(filter) : addFilter(filter)
+  }
+
+  const onClickCount: MouseEventHandler = async (e) => {
     if (e.shiftKey) console.log('shift key pressed')
     console.log(`Adding a tag ${name} to multiple images: ${imageIds.join(', ')}`)
     if (id == 0) {
@@ -277,11 +293,16 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
 
   return (
     <div className={styles}>
-      <p key={id}>{name}</p>
+      <p
+        key={id}
+        onClick={onClickName}
+        style={{ border: isFiltered ? 'solid 2px pink' : undefined }}>
+        {name}
+      </p>
       {selActive && (
         <span
           title={'click to add all\nshift+click to subtract all'}
-          onClick={onClick}
+          onClick={onClickCount}
           style={{
             backgroundColor: len > 0 ? 'yellow' : undefined,
             cursor: id != 0 ? undefined : 'default',
