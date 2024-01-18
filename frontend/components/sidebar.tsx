@@ -163,7 +163,10 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
     <div className={styles}>
       <p
         key={id}
-        style={{ border: isFiltered ? 'solid 2px pink' : undefined }}
+        style={{
+          color: isFiltered ? 'pink' : undefined,
+          cursor: selActive ? undefined : 'pointer',
+        }}
         onClick={onClickName}>
         {name}
       </p>
@@ -172,7 +175,6 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
           title={'click to add all\nshift+click to subtract all'}
           onClick={onClickCount}
           style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
-          {/* {len > 0 ? len : `+`} */}
           {len > 0 ? len : id != 0 ? '+' : null}
         </span>
       )}
@@ -286,17 +288,34 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
     }
   }
 
-  const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
-    '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
-      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900',
-      textAlign: 'center', lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
+  const styles = css({
+    display: 'flex',
+    alignItems: 'center',
+    paddingRight: '1rem',
+    '& span': {
+      width: '1.1rem',
+      height: '1.1rem',
+      display: 'block',
+      fontSize: '.8rem',
+      backgroundColor: 'slate.100',
+      borderRadius: '1.1rem',
+      color: 'slate.900',
+      textAlign: 'center',
+      lineHeight: '1rem',
+      marginLeft: 'auto',
+      cursor: 'pointer',
+    },
+  })
 
   return (
     <div className={styles}>
       <p
         key={id}
         onClick={onClickName}
-        style={{ border: isFiltered ? 'solid 2px pink' : undefined }}>
+        style={{
+          color: isFiltered ? 'pink' : undefined,
+          cursor: selActive ? undefined : 'pointer',
+        }}>
         {name}
       </p>
       {selActive && (
