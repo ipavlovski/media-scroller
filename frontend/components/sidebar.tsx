@@ -14,23 +14,23 @@ import { useToast } from './toast'
 //           STORE
 //  ===========================
 
-type Filter =
+type FilterAction =
   | { type: 'tag'; tagId: number }
   | { type: 'category'; categoryId: number }
   | { type: 'metadata'; content: string }
 
+export type Filters = {
+  categories: number[]
+  tags: number[]
+  metadata: string[]
+}
+
+// metadata: Extract<Filter, { type: 'metadata' }>[]
 interface SidebarStore {
-  filters: {
-    // categories: Extract<Filter, { type: 'category' }>[]
-    // tags: Extract<Filter, { type: 'tag' }>[]
-    // metadata: Extract<Filter, { type: 'metadata' }>[]
-    categories: number[]
-    tags: number[]
-    metadata: string[]
-  }
+  filters: Filters
   actions: {
-    addFilter: (filter: Filter) => void
-    removeFilter: (filter: Filter) => void
+    addFilter: (filter: FilterAction) => void
+    removeFilter: (filter: FilterAction) => void
   }
 }
 
@@ -113,7 +113,7 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
     const filter = {
       type: 'category',
       categoryId: id,
-    } satisfies Extract<Filter, { type: 'category' }>
+    } satisfies Extract<FilterAction, { type: 'category' }>
 
     isFiltered ? removeFilter(filter) : addFilter(filter)
   }
@@ -261,7 +261,7 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
     const filter = {
       type: 'tag',
       tagId: id,
-    } satisfies Extract<Filter, { type: 'tag' }>
+    } satisfies Extract<FilterAction, { type: 'tag' }>
 
     isFiltered ? removeFilter(filter) : addFilter(filter)
   }
@@ -413,7 +413,7 @@ function MetadataDivider() {
 }
 
 function MetadataResults() {
-  return <h3>metadata results</h3>
+  return <h3>...</h3>
 }
 
 //  ===========================

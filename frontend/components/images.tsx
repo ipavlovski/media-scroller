@@ -5,12 +5,40 @@ import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { InfiniteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
-import { useAllFilters } from './sidebar'
+import { Filters, useAllFilters } from './sidebar'
 
 const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
 const fromServerFull = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
 
+//  ==============================
+//              TYPES
+//  ==============================
+
+type ActiveImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
+
+type SelectionUpdate =
+  | { type: 'tag'; tagId: number; imageIds: number[] }
+  | { type: 'category'; categoryId: number; imageIds: number[] }
+
 type Coords = { i: number; j: number }
+
+type ImageProps =
+  & InfiniteImages['items'][0]['images'][0]
+  & { width: number; height: number }
+  & { left: string | undefined; right: string | undefined }
+
+export type SelectedImage = {
+  id: number
+  tagIds: number[]
+  categoryId: number | null
+  metadata: string[]
+  setter: Dispatch<SetStateAction<boolean>>
+}
+
+//  ==============================
+//              UTILS
+//  ==============================
+
 const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
   const max = 4
   const newRow = () => new Array(max).fill(true)
@@ -60,19 +88,40 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
-export type SelectedImage = {
-  id: number
-  tagIds: number[]
-  categoryId: number | null
-  metadata: string[]
-  setter: Dispatch<SetStateAction<boolean>>
+function filterImages(images: InfiniteImages['items'][0]['images'], filters: Filters) {
+  const { categories, tags, metadata } = filters
+  let filteredImages = images
+
+  if (categories.length > 0) {
+    filteredImages = filteredImages.filter((image) => {
+      // handle the 'uncategorized' condition
+      let imageCategoryId = image.categoryId || 0
+      return categories.includes(imageCategoryId)
+    })
+  }
+
+  if (tags.length > 0) {
+    filteredImages = filteredImages.filter((image) => {
+      if (tags.includes(0) && image.imagesToTags.length == 0) return true
+      return image.imagesToTags.find((v) => tags.includes(v.tagId))
+    })
+  }
+
+  if (metadata.length > 0) {
+    filteredImages = filteredImages.filter((image) => {
+      let imageMetadata = image.metadata
+      return imageMetadata.find((datum) =>
+        datum.content != null && metadata.includes(datum.content)
+      )
+    })
+  }
+
+  return filteredImages
 }
 
-type ActiveImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
-
-type SelectionUpdate =
-  | { type: 'tag'; tagId: number; imageIds: number[] }
-  | { type: 'category'; categoryId: number; imageIds: number[] }
+//  ==============================
+//              STORE
+//  ==============================
 
 interface ImageStore {
   selected: SelectedImage[]
@@ -162,20 +211,16 @@ const useImageStore = create<ImageStore>()((set, get) => ({
 export const useImageSelection = () => useImageStore((state) => state.selected)
 export const useImageActions = () => useImageStore((state) => state.actions)
 
-type ImageProps =
-  & InfiniteImages['items'][0]['images'][0]
-  & { width: number; height: number }
-  & { left: string | undefined; right: string | undefined }
+//  ==================================
+//              COMPONENTS
+//  ==================================
+
 function Image(image: ImageProps) {
   const { directory, filename, width, height, dateIso, id, ...props } = image
 
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
   const { select, deselect, activate, setModalUrl } = useImageActions()
-
-  /*
-  SPRINGS
-  */
 
   const [dimensionProps, dimensionApi] = useSpring(
     () => ({
@@ -190,10 +235,6 @@ function Image(image: ImageProps) {
     }),
     [],
   )
-
-  /*
-  CLICK HANDLERS
-  */
 
   const longClickHandler = () => {
     if (!isSelected) {
@@ -243,12 +284,12 @@ function Image(image: ImageProps) {
     return () => clearTimeout(timerId)
   }, [startLongPress])
 
+  /* MOUSE EVENTS */
+
   const onMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
     if (e.target instanceof HTMLElement && e.target.tagName == 'DIV') {
       headerClickHandler()
-
-      // prevents long-click on the title from activating stuff
-      return
+      return // prevents long-click on the title from activating stuff
     }
     setStartLongPress(true)
   }
@@ -381,7 +422,7 @@ export default function Images() {
   const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteImages()
 
-  const { categories, tags, metadata } = useAllFilters()
+  const filters = useAllFilters()
 
   useEffect(() => {
     if (inView && hasNextPage) fetchNextPage()
@@ -421,56 +462,22 @@ export default function Images() {
   let left: string | undefined = undefined
   let center: string | undefined = undefined
 
-  // const processFilters = <T extends { id: number }>(images: T[]) => {
-  //   let filtered: T[]
-
-  //   if (categories.length > 0)
-
-  //   filtered = images.filter((image) => {
-  //     let categoryId = image.categoryId || 0
-  //     return categories.includes(categoryId)
-  //   })
-  // }
-
   return (
     <div className={styles.container}>
       <div>
         {data?.pages.map(({ items }, pageInd) =>
           items.map(({ date, images }, dateInd) => {
+            const filteredImages = filterImages(images, filters)
+
             const processedImages = prepImages(
-              images.map((v) => ({ ...v, ...getAspect(v.aspect) })),
+              filteredImages.map((v) => ({ ...v, ...getAspect(v.aspect) })),
             )
-
-            let filteredImages = processedImages
-            if (categories.length > 0) {
-              filteredImages = filteredImages.filter((image) => {
-                // handle the 'uncategorized' condition
-                let imageCategoryId = image.categoryId || 0
-                return categories.includes(imageCategoryId)
-              })
-            }
-
-            if (tags.length > 0) {
-              filteredImages = filteredImages.filter((image) => {
-                if (tags.includes(0) && image.imagesToTags.length == 0) return true
-                return image.imagesToTags.find((v) => tags.includes(v.tagId))
-              })
-            }
-
-            if (metadata.length > 0) {
-              filteredImages = filteredImages.filter((image) => {
-                let imageMetadata = image.metadata
-                return imageMetadata.find((datum) =>
-                  datum.content != null && metadata.includes(datum.content)
-                )
-              })
-            }
 
             return (
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {filteredImages.map((image, ind) => {
+                  {processedImages.map((image, ind) => {
                     // try to get the 'next' item (in a triple-nested data-structure)
                     let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
                       ind + 1,
