@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { InfiniteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
+import { useAllFilters } from './sidebar'
 
 const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
 const fromServerFull = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
@@ -68,6 +69,7 @@ export type SelectedImage = {
 }
 
 type ActiveImage = { id: number; setter: Dispatch<SetStateAction<boolean>> }
+
 type SelectionUpdate =
   | { type: 'tag'; tagId: number; imageIds: number[] }
   | { type: 'category'; categoryId: number; imageIds: number[] }
@@ -88,77 +90,74 @@ interface ImageStore {
   }
 }
 
-const useImageStore = create<ImageStore>()(
-  (set, get) => ({
-    selected: [],
-    active: null,
-    modalUrl: '',
-    actions: {
-      setModalUrl: (url) =>
-        set((state) => {
-          return ({ modalUrl: url })
-        }),
-      activate: (active) =>
-        set((state) => {
-          // if there is an existing selection (and it differs from incoming one), deselect it first
-          state.active != null && state.active.id != active.id
-            && state.active.setter(false)
-          return ({ active })
-        }),
-      deactivate: () =>
-        set((state) => {
-          // if there is an existing selection, deselect it
-          state.active != null && state.active.setter(false)
-          return ({ active: null })
-        }),
-      select: (selection) =>
-        set((state) => ({ selected: [...state.selected, selection] })),
-      getSelected: () => get().selected,
-      updateSelected: (props) =>
-        set((state) => {
-          const updateType = props.type
-          switch (updateType) {
-            case 'category': {
-              const { imageIds, categoryId } = props
-              const selected = state.selected.map((selectedImage) => {
-                const match = imageIds.find((updateImageId) =>
-                  updateImageId == selectedImage.id
-                )
-                if (match) selectedImage.categoryId = categoryId
-                return selectedImage
-              })
-              return ({ selected })
-            }
-            case 'tag': {
-              const { imageIds, tagId } = props
-              const selected = state.selected.map((selectedImage) => {
-                const match = imageIds.find((updateImageId) =>
-                  updateImageId == selectedImage.id
-                )
-                if (match) selectedImage.tagIds.push(tagId)
-                return selectedImage
-              })
-              return ({ selected })
-            }
-            default:
-              updateType satisfies never
-              return ({ selected: state.selected })
+const useImageStore = create<ImageStore>()((set, get) => ({
+  selected: [],
+  active: null,
+  modalUrl: '',
+  actions: {
+    setModalUrl: (url) =>
+      set((state) => {
+        return ({ modalUrl: url })
+      }),
+    activate: (active) =>
+      set((state) => {
+        // if there is an existing selection (and it differs from incoming one), deselect it first
+        state.active != null && state.active.id != active.id
+          && state.active.setter(false)
+        return ({ active })
+      }),
+    deactivate: () =>
+      set((state) => {
+        // if there is an existing selection, deselect it
+        state.active != null && state.active.setter(false)
+        return ({ active: null })
+      }),
+    select: (selection) => set((state) => ({ selected: [...state.selected, selection] })),
+    getSelected: () => get().selected,
+    updateSelected: (props) =>
+      set((state) => {
+        const updateType = props.type
+        switch (updateType) {
+          case 'category': {
+            const { imageIds, categoryId } = props
+            const selected = state.selected.map((selectedImage) => {
+              const match = imageIds.find((updateImageId) =>
+                updateImageId == selectedImage.id
+              )
+              if (match) selectedImage.categoryId = categoryId
+              return selectedImage
+            })
+            return ({ selected })
           }
-        }),
-      deselect: (id) =>
-        set((state) => {
-          const item = state.selected.find((item) => item.id == id)
-          item && item.setter(false)
-          return { selected: state.selected.filter((item) => item.id != id) }
-        }),
-      deselectAll: () =>
-        set((state) => {
-          state.selected.map((item) => item.setter(false))
-          return { selected: [] }
-        }),
-    },
-  }),
-)
+          case 'tag': {
+            const { imageIds, tagId } = props
+            const selected = state.selected.map((selectedImage) => {
+              const match = imageIds.find((updateImageId) =>
+                updateImageId == selectedImage.id
+              )
+              if (match) selectedImage.tagIds.push(tagId)
+              return selectedImage
+            })
+            return ({ selected })
+          }
+          default:
+            updateType satisfies never
+            return ({ selected: state.selected })
+        }
+      }),
+    deselect: (id) =>
+      set((state) => {
+        const item = state.selected.find((item) => item.id == id)
+        item && item.setter(false)
+        return { selected: state.selected.filter((item) => item.id != id) }
+      }),
+    deselectAll: () =>
+      set((state) => {
+        state.selected.map((item) => item.setter(false))
+        return { selected: [] }
+      }),
+  },
+}))
 
 export const useImageSelection = () => useImageStore((state) => state.selected)
 export const useImageActions = () => useImageStore((state) => state.actions)
@@ -382,6 +381,8 @@ export default function Images() {
   const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteImages()
 
+  const { categories, tags, metadata } = useAllFilters()
+
   useEffect(() => {
     if (inView && hasNextPage) fetchNextPage()
   }, [inView, hasNextPage])
@@ -429,11 +430,21 @@ export default function Images() {
               images.map((v) => ({ ...v, ...getAspect(v.aspect) })),
             )
 
+            const hasFilters = categories.length > 0
+              || tags.length > 0
+              || metadata.length > 0
+            const filteredImages = hasFilters
+              ? processedImages.filter((image) => {
+                let categoryId = image.categoryId || 0
+                return categories.includes(categoryId)
+              })
+              : processedImages
+
             return (
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image, ind) => {
+                  {filteredImages.map((image, ind) => {
                     // try to get the 'next' item (in a triple-nested data-structure)
                     let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
                       ind + 1,

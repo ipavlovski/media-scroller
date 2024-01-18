@@ -81,8 +81,7 @@ export const appRouter = router({
           updateRecords: z.object({ dateAgg: z.string(), imageId: z.number() }).array(),
         }),
       ]),
-    )
-    .mutation(async ({ input }) => {
+    ).mutation(async ({ input }) => {
       const inputType = input.type
       switch (inputType) {
         case 'category':

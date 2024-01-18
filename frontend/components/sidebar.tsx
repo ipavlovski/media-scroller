@@ -1,6 +1,7 @@
 import { MouseEventHandler, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
+import { create } from 'zustand'
 import { Categories, Tags, useCategories, useCreateCategory, useCreateTag, useTags,
   useUpdateImageCategories, useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
@@ -9,21 +10,84 @@ import { Dialog, DialogProps } from './dialog'
 import { SelectedImage, useImageActions, useImageSelection } from './images'
 import { useToast } from './toast'
 
-function Divider({ text }: { text: string }) {
-  const styles = css({
-    borderBottom: 'solid white 2px',
-    width: '8rem',
-    marginRight: '1rem',
-    fontSize: '10px',
-    letterSpacing: 'widest',
-    textTransform: 'uppercase',
-  })
-  return (
-    <div className={styles}>
-      {text}
-    </div>
-  )
+//  ===========================
+//           STORE
+//  ===========================
+
+type Filter =
+  | { type: 'tag'; tagId: number }
+  | { type: 'category'; categoryId: number }
+  | { type: 'metadata'; content: string }
+
+interface SidebarStore {
+  filters: {
+    // categories: Extract<Filter, { type: 'category' }>[]
+    // tags: Extract<Filter, { type: 'tag' }>[]
+    // metadata: Extract<Filter, { type: 'metadata' }>[]
+    categories: number[]
+    tags: number[]
+    metadata: string[]
+  }
+  actions: {
+    addFilter: (filter: Filter) => void
+    removeFilter: (filter: Filter) => void
+  }
 }
+
+const useSidebarStore = create<SidebarStore>()((set, get) => ({
+  filters: { categories: [], tags: [], metadata: [] },
+  actions: {
+    addFilter: (filter) =>
+      set((state) => {
+        switch (filter.type) {
+          case 'category':
+            return ({ filters: {
+              ...state.filters,
+              categories: [...state.filters.categories, filter.categoryId],
+            } })
+          case 'tag':
+            return ({ filters: {
+              ...state.filters,
+              tags: [...state.filters.tags, filter.tagId],
+            } })
+          case 'metadata':
+            return ({ filters: {
+              ...state.filters,
+              metadata: [...state.filters.metadata, filter.content],
+            } })
+        }
+      }),
+    removeFilter: (filter) =>
+      set((state) => {
+        switch (filter.type) {
+          case 'category':
+            return ({ filters: {
+              ...state.filters,
+              categories: [
+                ...state.filters.categories.filter((v) => v != filter.categoryId),
+              ],
+            } })
+          case 'tag':
+            return ({ filters: {
+              ...state.filters,
+              tags: [...state.filters.tags.filter((v) => v != filter.tagId)],
+            } })
+          case 'metadata':
+            return ({ filters: {
+              ...state.filters,
+              metadata: [...state.filters.metadata.filter((v) => v != filter.content)],
+            } })
+        }
+      }),
+  },
+}))
+
+const useSidebarActions = () => useSidebarStore((state) => state.actions)
+const useFilteredCategories = () => useSidebarStore((state) => state.filters.categories)
+const useFilteredTags = () => useSidebarStore((state) => state.filters.tags)
+const useFilteredMetadata = () => useSidebarStore((state) => state.filters.metadata)
+
+export const useAllFilters = () => useSidebarStore((state) => state.filters)
 
 //  ===========================
 //           CATEGORIES
@@ -35,18 +99,29 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
   const { category: { id, name, imageIds }, selActive } = props
   const len = imageIds.length
 
-  const updateImageCategories = useUpdateImageCategories()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
+  const updateImageCategories = useUpdateImageCategories()
+  const filteredCategories = useFilteredCategories()
+  const { addFilter, removeFilter } = useSidebarActions()
 
-  const styles = css({ display: 'flex', alignItems: 'center', paddingRight: '1rem',
-    '& span': { width: '1.1rem', height: '1.1rem', display: 'block', fontSize: '.8rem',
-      backgroundColor: 'slate.100', borderRadius: '1.1rem', color: 'slate.900',
-      textAlign: 'center', lineHeight: '1rem', marginLeft: 'auto', cursor: 'pointer' } })
+  const isFiltered = filteredCategories.includes(id)
 
-  const onClick: MouseEventHandler = async (e) => {
+  const onClickName = () => {
+    if (selActive) return
+
+    const filter = {
+      type: 'category',
+      categoryId: id,
+    } satisfies Extract<Filter, { type: 'category' }>
+
+    isFiltered ? removeFilter(filter) : addFilter(filter)
+  }
+
+  const onClickCount: MouseEventHandler = async (e) => {
     if (e.shiftKey) console.log('shift key pressed')
     console.log(`Adding a category ${name} to multiple images: ${imageIds.join(', ')}`)
+
     if (id == 0) {
       console.log('Cant add category with undefined.')
       return
@@ -65,13 +140,37 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
     }
   }
 
+  const styles = css({
+    display: 'flex',
+    alignItems: 'center',
+    paddingRight: '1rem',
+    '& span': {
+      width: '1.1rem',
+      height: '1.1rem',
+      display: 'block',
+      fontSize: '.8rem',
+      backgroundColor: 'slate.100',
+      borderRadius: '1.1rem',
+      color: 'slate.900',
+      textAlign: 'center',
+      lineHeight: '1rem',
+      marginLeft: 'auto',
+      cursor: 'pointer',
+    },
+  })
+
   return (
     <div className={styles}>
-      <p key={id}>{name}</p>
+      <p
+        key={id}
+        style={{ border: isFiltered ? 'solid 2px pink' : undefined }}
+        onClick={onClickName}>
+        {name}
+      </p>
       {selActive && (
         <span
           title={'click to add all\nshift+click to subtract all'}
-          onClick={onClick}
+          onClick={onClickCount}
           style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
           {len > 0 ? len : `+`}
         </span>
@@ -280,6 +379,21 @@ function MetadataResults() {
 //  ===========================
 //           SEARCHBAR
 //  ===========================
+function Divider({ text }: { text: string }) {
+  const styles = css({
+    borderBottom: 'solid white 2px',
+    width: '8rem',
+    marginRight: '1rem',
+    fontSize: '10px',
+    letterSpacing: 'widest',
+    textTransform: 'uppercase',
+  })
+  return (
+    <div className={styles}>
+      {text}
+    </div>
+  )
+}
 
 function ImageCounter() {
   const styles = css({
