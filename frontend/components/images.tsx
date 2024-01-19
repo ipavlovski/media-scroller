@@ -25,7 +25,6 @@ type Coords = { i: number; j: number }
 type ImageProps =
   & InfiniteImages['items'][0]['images'][0]
   & { width: number; height: number }
-  & { left: string | undefined; right: string | undefined }
 
 export type SelectedImage = {
   id: number
@@ -88,7 +87,7 @@ const getAspect = (aspect: number) => {
     : { width: 1, height: 1 }
 }
 
-function filterImages(images: InfiniteImages['items'][0]['images'], filters: Filters) {
+const filterImages = (images: InfiniteImages['items'][0]['images'], filters: Filters) => {
   const { categories, tags, metadata } = filters
   let filteredImages = images
 
@@ -118,6 +117,8 @@ function filterImages(images: InfiniteImages['items'][0]['images'], filters: Fil
 
   return filteredImages
 }
+
+// const getImageNeighbours =
 
 //  ==============================
 //              STORE
@@ -337,9 +338,7 @@ function Image(image: ImageProps) {
           ...dimensionProps,
         }}
         src={fromServerThumb(`${directory}/${filename}`)}
-        data-left={props.left}
         data-center={`${directory}/${filename}`}
-        data-right={props.right}
         title={dateIso} />
     </animated.div>
   )
@@ -381,13 +380,28 @@ function ZoomView() {
   useEffect(() => {
     if (!ref || modalUrl == '') return
     ref.current?.showModal()
-    const img = document.querySelector<HTMLImageElement>(`img[data-center="${modalUrl}"]`)
-    setLinks({ left: img?.dataset?.left, right: img?.dataset?.right })
+
+    const imgNodeList = document.querySelectorAll('img[data-center]')
+    const allImages = Array.from(imgNodeList)
+    const url = '2024-01/chrome_5nAFHRH09a.gif'
+    const centerInd = allImages.findIndex((v) => v.getAttribute('data-center') == modalUrl)
+
+    const left = centerInd != -1 && centerInd - 1 >= 0
+      ? allImages.at(centerInd - 1)?.getAttribute('data-center')
+      : undefined
+
+    const right = centerInd != -1 && centerInd + 1 < allImages.length
+      ? allImages.at(centerInd + 1)?.getAttribute('data-center')
+      : undefined
+
+    setLinks({
+      left: left || undefined,
+      right: right || undefined,
+    })
   }, [modalUrl])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // console.log(`pressed: ${e.key}: left=${left} right=${right}`)
       switch (e.key) {
         case 'ArrowRight':
           right && setModalUrl(right)
@@ -459,14 +473,11 @@ export default function Images() {
     }),
   }
 
-  let left: string | undefined = undefined
-  let center: string | undefined = undefined
-
   return (
     <div className={styles.container}>
       <div>
-        {data?.pages.map(({ items }, pageInd) =>
-          items.map(({ date, images }, dateInd) => {
+        {data?.pages.map(({ items }) =>
+          items.map(({ date, images }) => {
             const filteredImages = filterImages(images, filters)
 
             const processedImages = prepImages(
@@ -477,24 +488,8 @@ export default function Images() {
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image, ind) => {
-                    // try to get the 'next' item (in a triple-nested data-structure)
-                    let nextItem = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
-                      ind + 1,
-                    )
-                    nextItem ??= data?.pages.at(pageInd)?.items.at(dateInd + 1)?.images
-                      .at(0)
-                    nextItem ??= data?.pages.at(pageInd + 1)?.items.at(0)?.images.at(0)
-                    const right = nextItem && `${nextItem.directory}/${nextItem.filename}`
-
-                    // make the current item 'last', and then refresh the current one
-                    left = center
-                    const item = data?.pages.at(pageInd)?.items.at(dateInd)?.images.at(
-                      ind,
-                    )
-                    center = item && `${item.directory}/${item.filename}`
-
-                    return <Image key={image.id} {...image} left={left} right={right} />
+                  {processedImages.map((image) => {
+                    return <Image key={image.id} {...image}  />
                   })}
                 </div>
               </Fragment>
