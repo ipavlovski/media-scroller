@@ -1,14 +1,14 @@
 import { animated, useSpring } from '@react-spring/web'
 import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { create } from 'zustand'
 import { InfiniteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Filters, useAllFilters } from './sidebar'
+import ZoomView, { useZoomActions } from './zoom'
 
 const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
-const fromServerFull = (dirImg: string) => `http://localhost:3000/full/${dirImg}`
 
 //  ==============================
 //              TYPES
@@ -37,7 +37,6 @@ export type SelectedImage = {
 //  ==============================
 //              UTILS
 //  ==============================
-
 
 const getAspect = (aspect: number) => {
   // 1=big, 2=landscape, 3=portrait, 4=small
@@ -125,7 +124,6 @@ const filterImages = (images: InfiniteImages['items'][0]['images'], filters: Fil
   return filteredImages
 }
 
-
 //  ==============================
 //              STORE
 //  ==============================
@@ -133,9 +131,7 @@ const filterImages = (images: InfiniteImages['items'][0]['images'], filters: Fil
 interface ImageStore {
   selected: SelectedImage[]
   active: ActiveImage | null
-  modalUrl: string
   actions: {
-    setModalUrl: (url: string) => void
     activate: (activeImage: ActiveImage) => void
     deactivate: () => void
     select: (selectedImage: SelectedImage) => void
@@ -149,12 +145,7 @@ interface ImageStore {
 const useImageStore = create<ImageStore>()((set, get) => ({
   selected: [],
   active: null,
-  modalUrl: '',
   actions: {
-    setModalUrl: (url) =>
-      set((state) => {
-        return ({ modalUrl: url })
-      }),
     activate: (active) =>
       set((state) => {
         // if there is an existing selection (and it differs from incoming one), deselect it first
@@ -227,7 +218,8 @@ function Image(image: ImageProps) {
 
   const [isSelected, setSelected] = useState(false)
   const [isActive, setActive] = useState(false)
-  const { select, deselect, activate, setModalUrl } = useImageActions()
+  const { select, deselect, activate } = useImageActions()
+  const { setModalUrl } = useZoomActions()
 
   const [dimensionProps, dimensionApi] = useSpring(
     () => ({
@@ -347,93 +339,6 @@ function Image(image: ImageProps) {
         data-center={`${directory}/${filename}`}
         title={dateIso} />
     </animated.div>
-  )
-}
-
-function ZoomView() {
-  const styles = css({
-    margin: 'auto',
-    '&::backdrop': {
-      backgroundColor: '#000000',
-      opacity: '0.4',
-    },
-    '& section': {
-      width: '20%',
-      height: '100vh',
-      position: 'fixed',
-      cursor: 'pointer',
-      left: '0',
-      top: '0',
-      _hover: {
-        backgroundColor: 'black',
-        opacity: '0.3',
-        transition: 'background-color 300ms ease-in-out',
-      },
-    },
-    '& section:nth-child(3)': {
-      left: '80%',
-      top: '0',
-    },
-  })
-
-  const modalUrl = useImageStore((store) => store.modalUrl)
-  const { setModalUrl } = useImageActions()
-
-  const ref = useRef<HTMLDialogElement>(null)
-
-  const [{ left, right }, setLinks] = useState<{ left?: string; right?: string }>({})
-
-  useEffect(() => {
-    if (!ref || modalUrl == '') return
-    ref.current?.showModal()
-
-    const imgNodeList = document.querySelectorAll('img[data-center]')
-    const allImages = Array.from(imgNodeList)
-    const centerInd = allImages.findIndex((v) =>
-      v.getAttribute('data-center') == modalUrl
-    )
-
-    const left = centerInd != -1 && centerInd - 1 >= 0
-      ? allImages.at(centerInd - 1)?.getAttribute('data-center')
-      : undefined
-
-    const right = centerInd != -1 && centerInd + 1 < allImages.length
-      ? allImages.at(centerInd + 1)?.getAttribute('data-center')
-      : undefined
-
-    setLinks({
-      left: left || undefined,
-      right: right || undefined,
-    })
-  }, [modalUrl])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowRight':
-          right && setModalUrl(right)
-          break
-        case 'ArrowLeft':
-          left && setModalUrl(left)
-          break
-        default:
-          return
-      }
-    }
-
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [left, right])
-
-  return (
-    <dialog ref={ref} className={styles} onClose={() => setModalUrl('')}
-      onClick={(e) => e.currentTarget.close()}>
-      <section onClick={(e) => (left && setModalUrl(left), e.stopPropagation())} />
-      {modalUrl != '' && (
-        <img src={fromServerFull(modalUrl)} onClick={(e) => e.stopPropagation()} />
-      )}
-      <section onClick={(e) => (right && setModalUrl(right), e.stopPropagation())} />
-    </dialog>
   )
 }
 
