@@ -38,23 +38,39 @@ export type SelectedImage = {
 //              UTILS
 //  ==============================
 
-const prepImages = <T extends { width: number; height: number }>(images: T[]) => {
+
+const getAspect = (aspect: number) => {
+  // 1=big, 2=landscape, 3=portrait, 4=small
+  return aspect == 1 ? { width: 2, height: 2 } : aspect == 2
+    ? { width: 2, height: 1 }
+    : aspect == 3
+    ? { width: 1, height: 2 }
+    : { width: 1, height: 1 }
+}
+
+// const prepImages = <T extends { width: number; height: number }>(images: T[]) => {}
+const prepImages = <T extends { aspect: number }>(images: T[]) => {
   const max = 4
   const newRow = () => new Array(max).fill(true)
   const grid: boolean[][] = [newRow(), newRow()]
   const coords: Coords = { i: 0, j: 0 }
 
-  for (const color of images) {
+  return images.map((v) => {
+    const dims = getAspect(v.aspect)
+    const image = { ...v, ...dims }
+
     // check item to the right (not beyond grid boundary, and not obstructed from above/right)
-    const isWidthOK = color.width == 1
+    const isWidthOK = image.width == 1
       || (coords.j + 2 <= max && grid[coords.i]![coords.j + 1]!)
-    if (!isWidthOK) color.width = 1
+    if (!isWidthOK) image.width = 1
 
     // insert item
     grid[coords.i]![coords.j]! = false
-    if (color.width == 2) grid[coords.i]![coords.j + 1]! = false
-    if (color.height == 2) grid[coords.i + 1]![coords.j]! = false
-    if (color.width == 2 && color.height == 2) grid[coords.i + 1]![coords.j + 1]! = false
+    if (image.width == 2) grid[coords.i]![coords.j + 1]! = false
+    if (image.height == 2) grid[coords.i + 1]![coords.j]! = false
+    if (image.width == 2 && image.height == 2) {
+      grid[coords.i + 1]![coords.j + 1]! = false
+    }
 
     // after inserting the item, increment positional index
     const ind = grid[coords.i]!.findIndex((v) => v == true)
@@ -73,18 +89,9 @@ const prepImages = <T extends { width: number; height: number }>(images: T[]) =>
         grid.push(newRow(), newRow())
       }
     }
-  }
 
-  return images
-}
-
-const getAspect = (aspect: number) => {
-  // 1=big, 2=landscape, 3=portrait, 4=small
-  return aspect == 1 ? { width: 2, height: 2 } : aspect == 2
-    ? { width: 2, height: 1 }
-    : aspect == 3
-    ? { width: 1, height: 2 }
-    : { width: 1, height: 1 }
+    return image
+  })
 }
 
 const filterImages = (images: InfiniteImages['items'][0]['images'], filters: Filters) => {
@@ -118,7 +125,6 @@ const filterImages = (images: InfiniteImages['items'][0]['images'], filters: Fil
   return filteredImages
 }
 
-// const getImageNeighbours =
 
 //  ==============================
 //              STORE
@@ -383,8 +389,9 @@ function ZoomView() {
 
     const imgNodeList = document.querySelectorAll('img[data-center]')
     const allImages = Array.from(imgNodeList)
-    const url = '2024-01/chrome_5nAFHRH09a.gif'
-    const centerInd = allImages.findIndex((v) => v.getAttribute('data-center') == modalUrl)
+    const centerInd = allImages.findIndex((v) =>
+      v.getAttribute('data-center') == modalUrl
+    )
 
     const left = centerInd != -1 && centerInd - 1 >= 0
       ? allImages.at(centerInd - 1)?.getAttribute('data-center')
@@ -479,18 +486,13 @@ export default function Images() {
         {data?.pages.map(({ items }) =>
           items.map(({ date, images }) => {
             const filteredImages = filterImages(images, filters)
-
-            const processedImages = prepImages(
-              filteredImages.map((v) => ({ ...v, ...getAspect(v.aspect) })),
-            )
+            const processedImages = prepImages(filteredImages)
 
             return (
               <Fragment key={date}>
                 <h1 className={styles.header}>{date}</h1>
                 <div className={styles.grid}>
-                  {processedImages.map((image) => {
-                    return <Image key={image.id} {...image}  />
-                  })}
+                  {processedImages.map((image) => <Image key={image.id} {...image} />)}
                 </div>
               </Fragment>
             )
