@@ -7,8 +7,6 @@ import { css } from '../styled-system/css'
 import { Filters, useAllFilters } from './sidebar'
 import { useZoomActions } from './zoom'
 
-const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
-
 //  ==============================
 //              TYPES
 //  ==============================
@@ -36,6 +34,8 @@ export type SelectedImage = {
 //  ==============================
 //              UTILS
 //  ==============================
+
+const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
 
 const getAspect = (aspect: number) => {
   // 1=big, 2=landscape, 3=portrait, 4=small
@@ -366,6 +366,8 @@ export default function ImageGrid() {
     items.map(({ date, images }) => {
       const filteredImages = filterImages(images, filters)
       const processedImages = prepImages(filteredImages)
+
+      if (processedImages.length == 0) return undefined
 
       return (
         <div key={date} className={styles}>
