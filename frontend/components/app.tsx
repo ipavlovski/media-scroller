@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { httpBatchLink } from '@trpc/client'
 import { useState } from 'react'
 import { trpc } from '../apis/queries'
-import Images from './images'
+import { css } from '../styled-system/css'
+import Footer from './footer'
+import ImageGrid from './images'
 import Sidebar from './sidebar'
 import { Toaster } from './toast'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import Zoom from './zoom'
 
 export default function App() {
   const [trpcClient] = useState(() =>
@@ -28,11 +31,19 @@ export default function App() {
     })
   )
 
+  const styles = css({
+    marginLeft: '12rem',
+  })
+
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <Sidebar />
-        <Images />
+        <main className={styles}>
+          <ImageGrid />
+          <Footer />
+        </main>
+        <Zoom />
         <Toaster />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

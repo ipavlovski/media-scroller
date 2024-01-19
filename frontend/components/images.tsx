@@ -1,12 +1,11 @@
 import { animated, useSpring } from '@react-spring/web'
 import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
-import { Fragment, useEffect, useState } from 'react'
-import { useInView } from 'react-intersection-observer'
+import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { InfiniteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Filters, useAllFilters } from './sidebar'
-import ZoomView, { useZoomActions } from './zoom'
+import { useZoomActions } from './zoom'
 
 const fromServerThumb = (dirImg: string) => `http://localhost:3000/thumbs/${dirImg}`
 
@@ -213,7 +212,7 @@ export const useImageActions = () => useImageStore((state) => state.actions)
 //              COMPONENTS
 //  ==================================
 
-function Image(image: ImageProps) {
+function Image({ image }: { image: ImageProps }) {
   const { directory, filename, width, height, dateIso, id, ...props } = image
 
   const [isSelected, setSelected] = useState(false)
@@ -342,74 +341,40 @@ function Image(image: ImageProps) {
   )
 }
 
-export default function Images() {
-  const { ref, inView } = useInView()
-
-  const { data, isSuccess, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteImages()
-
+export default function ImageGrid() {
   const filters = useAllFilters()
-
-  useEffect(() => {
-    if (inView && hasNextPage) fetchNextPage()
-  }, [inView, hasNextPage])
-
+  const { data, isSuccess } = useInfiniteImages()
   if (isSuccess) console.log(`success!: pages= ${data.pages.length}`)
 
-  const styles = {
-    container: css({
-      marginLeft: '12rem',
-    }),
-    header: css({
+  const styles = css({
+    '& > h1': {
       fontSize: '1.4rem',
       fontWeight: 'bold',
       marginTop: '2rem',
       _first: { marginTop: '1rem' },
-    }),
-    grid: css({
+    },
+    '& > section': {
       display: 'grid',
       gridTemplateColumns: '125px 125px 125px 125px',
       gridAutoRows: '125px',
       rowGap: '5px',
       columnGap: '5px',
-    }),
-    footer: css({
-      display: 'flex',
-      flexDir: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '2rem',
-      fontSize: '3rem',
-      textTransform: 'uppercase',
-      borderTop: 'solid white',
-    }),
-  }
+    },
+  })
 
-  return (
-    <div className={styles.container}>
-      <div>
-        {data?.pages.map(({ items }) =>
-          items.map(({ date, images }) => {
-            const filteredImages = filterImages(images, filters)
-            const processedImages = prepImages(filteredImages)
+  return data?.pages.map(({ items }) =>
+    items.map(({ date, images }) => {
+      const filteredImages = filterImages(images, filters)
+      const processedImages = prepImages(filteredImages)
 
-            return (
-              <Fragment key={date}>
-                <h1 className={styles.header}>{date}</h1>
-                <div className={styles.grid}>
-                  {processedImages.map((image) => <Image key={image.id} {...image} />)}
-                </div>
-              </Fragment>
-            )
-          })
-        )}
-      </div>
-      <div className={styles.footer} ref={ref}>
-        <h3>This is a footer</h3>
-        {isFetchingNextPage && <p>... loading ...</p>}
-      </div>
-
-      <ZoomView />
-    </div>
+      return (
+        <div key={date} className={styles}>
+          <h1>{date}</h1>
+          <section>
+            {processedImages.map((image) => <Image key={image.id} image={image} />)}
+          </section>
+        </div>
+      )
+    })
   )
 }
