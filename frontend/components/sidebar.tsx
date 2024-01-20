@@ -437,7 +437,7 @@ function Divider({ text }: { text: string }) {
 }
 
 const useImageDeleteShortcut = () => {
-  const { isLoading, delete: deleteImages } = useDeleteImages()
+  const { isPending, delete: deleteImages } = useDeleteImages()
   const { success, error } = useToast()
 
   useEffect(() => {
@@ -464,7 +464,7 @@ const useImageDeleteShortcut = () => {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  return isLoading
+  return isPending
 }
 
 function DeleteIndicator() {

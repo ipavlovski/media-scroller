@@ -5,9 +5,13 @@ import type { AppRouter } from '../../backend/router'
 import { useImageActions } from '../components/images'
 type RouterOutput = inferRouterOutputs<AppRouter>
 
+
+
 export const trpc = createTRPCReact<AppRouter>()
 
 /* IMAGES */
+
+
 
 export const useInfiniteImages = () =>
   trpc.infiniteImages
@@ -89,9 +93,10 @@ export const useDeleteImages = () => {
       console.log(`Successfully deleted ${output.length} images`)
     },
   })
+  // deleteImages.is
 
   return {
-    isLoading: deleteImages.isLoading,
+    isPending: deleteImages.isPending,
     delete: async () => {
       const imageIds = getSelected().map((v) => v.id)
       return await deleteImages.mutateAsync({ imageIds })
