@@ -2,9 +2,10 @@ import { animated, useSpring } from '@react-spring/web'
 import type { Dispatch, MouseEventHandler, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
-import { InfiniteImages, useInfiniteImages } from '../apis/queries'
+import { InfiniteImages, useDeleteImages, useInfiniteImages } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Filters, useAllFilters } from './sidebar'
+import { useToast } from './toast'
 import { useZoomActions } from './zoom'
 
 //  ==============================
@@ -341,9 +342,11 @@ function Image({ image }: { image: ImageProps }) {
   )
 }
 
+
 export default function ImageGrid() {
   const filters = useAllFilters()
   const { data, isSuccess } = useInfiniteImages()
+
   if (isSuccess) console.log(`success!: pages= ${data.pages.length}`)
 
   const styles = css({

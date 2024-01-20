@@ -1,9 +1,10 @@
-import { MouseEventHandler, useRef } from 'react'
+import { MouseEventHandler, useEffect, useRef } from 'react'
 import { BsJournal } from 'react-icons/bs'
 import { TbCategory, TbCategoryPlus, TbTags, TbTagStarred } from 'react-icons/tb'
 import { create } from 'zustand'
-import { Categories, Tags, useCategories, useCreateCategory, useCreateTag, useTags,
-  useUpdateImageCategories, useUpdateImageTags } from '../apis/queries'
+import { Categories, Tags, useCategories, useCreateCategory, useCreateTag,
+  useDeleteImages, useTags, useUpdateImageCategories,
+  useUpdateImageTags } from '../apis/queries'
 import { css } from '../styled-system/css'
 import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
@@ -435,6 +436,45 @@ function Divider({ text }: { text: string }) {
   )
 }
 
+const useImageDeleteShortcut = () => {
+  const { isLoading, delete: deleteImages } = useDeleteImages()
+  const { success, error } = useToast()
+
+  useEffect(() => {
+    const handler = async (e: KeyboardEvent) => {
+      console.log(`${e.key} pressed`)
+
+      if (e.key == 'Delete') {
+        try {
+          const images = await deleteImages()
+
+          success(`Deleted: ${images.length} images`)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error.'
+          error(msg)
+        }
+      }
+
+      if (e.key == ' ') {
+        console.log('SPACE')
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  return isLoading
+}
+
+function DeleteIndicator() {
+  const isLoading = useImageDeleteShortcut()
+
+  return <div>
+    {isLoading && 'Loading...'}
+  </div>
+}
+
 function ImageCounter() {
   const styles = css({
     width: '1.5rem',
@@ -475,6 +515,7 @@ function SearchBar() {
         <TbCategory size={'1.25rem'} />
         <TbTags size={'1.25rem'} />
         <BsJournal size={'1.25rem'} strokeWidth={0.25} />
+        <DeleteIndicator />
         <ImageCounter />
       </Flex>
     </div>

@@ -54,6 +54,12 @@ export const appRouter = router({
     }
   }),
 
+  deleteImages: t.procedure.input(
+    z.object({ imageIds: z.number().array() }),
+  ).mutation(async ({ input: { imageIds } }) => {
+    return await image.delete(imageIds)
+  }),
+
   updateImages: t.procedure
     .input(
       z.discriminatedUnion('type', [

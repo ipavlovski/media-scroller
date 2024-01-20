@@ -63,6 +63,19 @@ async function queryPaginatedByDate(endDate: string) {
   }
 }
 
+async function deleteImages(imageIds: number[]) {
+  const changes = await db.transaction(async (tx) => {
+    await tx.delete(imagesToTags).where(inArray(imagesToTags.imageId, imageIds))
+    await tx.delete(metadata).where(inArray(metadata.imageId, imageIds))
+
+    return await tx.delete(images)
+      .where(inArray(images.id, imageIds))
+      .returning({ imageId: images.id })
+  })
+
+  return changes
+}
+
 async function updateImageTags(tagId: number, imageIds: number[]) {
   const values = imageIds.map((imageId) => ({ tagId, imageId }))
   const changes = await db.insert(imagesToTags)
@@ -179,4 +192,5 @@ export const image = {
   queryPaginatedByDate,
   updateTags: updateImageTags,
   updateCategories: updateImageCategories,
+  delete: deleteImages,
 }

@@ -82,6 +82,23 @@ const useUpdateImages = () => {
   })
 }
 
+export const useDeleteImages = () => {
+  const { getSelected } = useImageActions()
+  const deleteImages = trpc.deleteImages.useMutation({
+    onSuccess: (output, input) => {
+      console.log(`Successfully deleted ${output.length} images`)
+    },
+  })
+
+  return {
+    isLoading: deleteImages.isLoading,
+    delete: async () => {
+      const imageIds = getSelected().map((v) => v.id)
+      return await deleteImages.mutateAsync({ imageIds })
+    }
+  }
+}
+
 export type InfiniteImages = RouterOutput['infiniteImages']
 
 /* CATEGORIES */
