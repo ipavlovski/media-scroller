@@ -32,6 +32,7 @@ interface SidebarStore {
   actions: {
     addFilter: (filter: FilterAction) => void
     removeFilter: (filter: FilterAction) => void
+    setFilter: (filter: FilterAction) => void
   }
 }
 
@@ -78,6 +79,18 @@ const useSidebarStore = create<SidebarStore>()((set, get) => ({
               ...state.filters,
               metadata: [...state.filters.metadata.filter((v) => v != filter.content)],
             } })
+        }
+      }),
+
+    setFilter: (filter) =>
+      set((state) => {
+        switch (filter.type) {
+          case 'category':
+            return ({ filters: { ...state.filters, categories: [filter.categoryId] } })
+          case 'tag':
+            return ({ filters: { ...state.filters, tags: [filter.tagId] } })
+          case 'metadata':
+            return ({ filters: { ...state.filters, metadata: [filter.content] } })
         }
       }),
   },
@@ -243,20 +256,18 @@ function CategoriesDivider() {
 //  ===========================
 
 type TagItemProps = Tags[0] & { imageIds: number[] }
-
 function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) {
   const { id, name, imageIds } = tag
-  const len = imageIds.length
 
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
+  const { addFilter, removeFilter, setFilter } = useSidebarActions()
   const filteredTags = useFilteredTags()
-  const { addFilter, removeFilter } = useSidebarActions()
 
-  const isFiltered = filteredTags.includes(id)
+  const isSelected = filteredTags.includes(id)
 
-  const onClickName = () => {
+  const onClickName: MouseEventHandler = (e) => {
     if (selActive) return
 
     const filter = {
@@ -264,7 +275,15 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
       tagId: id,
     } satisfies Extract<FilterAction, { type: 'tag' }>
 
-    isFiltered ? removeFilter(filter) : addFilter(filter)
+    if (e.shiftKey) {
+      isSelected ? removeFilter(filter) : addFilter(filter)
+    } else {
+      ;(isSelected && filteredTags.length > 1) || !isSelected
+        ? setFilter(filter)
+        : removeFilter(filter)
+    }
+
+    document.getSelection()?.removeAllRanges()
   }
 
   const onClickCount: MouseEventHandler = async (e) => {
@@ -314,7 +333,7 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
         key={id}
         onClick={onClickName}
         style={{
-          color: isFiltered ? 'pink' : undefined,
+          color: isSelected ? 'pink' : undefined,
           cursor: selActive ? undefined : 'pointer',
         }}>
         {name}
@@ -324,10 +343,10 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
           title={'click to add all\nshift+click to subtract all'}
           onClick={onClickCount}
           style={{
-            backgroundColor: len > 0 ? 'yellow' : undefined,
+            backgroundColor: imageIds.length > 0 ? 'yellow' : undefined,
             cursor: id != 0 ? undefined : 'default',
           }}>
-          {len > 0 ? len : id != 0 ? '+' : null}
+          {imageIds.length > 0 ? imageIds.length : id != 0 ? '+' : null}
         </span>
       )}
     </div>
@@ -442,12 +461,9 @@ const useImageDeleteShortcut = () => {
 
   useEffect(() => {
     const handler = async (e: KeyboardEvent) => {
-      console.log(`${e.key} pressed`)
-
       if (e.key == 'Delete') {
         try {
           const images = await deleteImages()
-
           success(`Deleted: ${images.length} images`)
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Unknown error.'
@@ -457,6 +473,7 @@ const useImageDeleteShortcut = () => {
 
       if (e.key == ' ') {
         console.log('SPACE')
+        e.preventDefault() 
       }
     }
 
@@ -470,9 +487,11 @@ const useImageDeleteShortcut = () => {
 function DeleteIndicator() {
   const isLoading = useImageDeleteShortcut()
 
-  return <div>
-    {isLoading && 'Loading...'}
-  </div>
+  return (
+    <div>
+      {isLoading && 'Loading...'}
+    </div>
+  )
 }
 
 function ImageCounter() {
