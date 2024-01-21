@@ -1,6 +1,6 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
-import { category, image, meta, tag } from '../db/handlers'
+import { category, image, meta, tag } from '../db/db-handlers'
 
 const t = initTRPC.create()
 const router = t.router

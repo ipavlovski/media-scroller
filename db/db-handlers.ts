@@ -1,16 +1,18 @@
 import Database from 'better-sqlite3'
-import { asc, between, count, desc, eq, gt, inArray, lte } from 'drizzle-orm'
+import { between, count, desc, eq, inArray, lte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
+import { processImage } from './fs-handlers'
 
 const db = drizzle(new Database('./db/sqlite.db'), { schema })
 const { images, tags, categories, metadata, imagesToTags } = schema
 
-async function queryByStartEndDate(startDate: string, endDate: string) {
-  // return await db.select().from(images)
-  //   .where(between(images.dateAgg, startDate, endDate))
-  //   .orderBy(desc(images.dateIso))
 
+//  ==============================
+//              IMAGES            
+//  ==============================
+
+async function queryByStartEndDate(startDate: string, endDate: string) {
   return await db.query.images.findMany({
     with: { imagesToTags: true, metadata: true },
     where: between(images.dateAgg, startDate, endDate),
@@ -63,18 +65,11 @@ async function queryPaginatedByDate(endDate: string) {
   }
 }
 
-async function deleteImages(imageIds: number[]) {
-  const changes = await db.transaction(async (tx) => {
-    await tx.delete(imagesToTags).where(inArray(imagesToTags.imageId, imageIds))
-    await tx.delete(metadata).where(inArray(metadata.imageId, imageIds))
-
-    return await tx.delete(images)
-      .where(inArray(images.id, imageIds))
-      .returning({ imageId: images.id, dateAgg: images.dateAgg })
-  })
-
-  return changes
+async function addImage(filename: string) {
+  const imageProps = await processImage(filename)
+  return await db.insert(images).values(imageProps)
 }
+
 
 async function updateImageTags(tagId: number, imageIds: number[]) {
   const values = imageIds.map((imageId) => ({ tagId, imageId }))
@@ -104,6 +99,23 @@ async function updateImageCategories(categoryId: number, imageIds: number[]) {
   return { type: 'category' as const, categoryId, updateRecords: updatedImageCategories }
 }
 
+async function deleteImages(imageIds: number[]) {
+  const changes = await db.transaction(async (tx) => {
+    await tx.delete(imagesToTags).where(inArray(imagesToTags.imageId, imageIds))
+    await tx.delete(metadata).where(inArray(metadata.imageId, imageIds))
+
+    return await tx.delete(images)
+      .where(inArray(images.id, imageIds))
+      .returning({ imageId: images.id, dateAgg: images.dateAgg })
+  })
+
+  return changes
+}
+
+//  ==================================
+//              CATEGORIES
+//  ==================================
+
 async function getCategories() {
   return await db.select().from(categories)
 }
@@ -122,6 +134,10 @@ async function deleteCategories(name: string) {
 
   return deletedIds
 }
+
+//  ============================
+//              TAGS
+//  ============================
 
 async function getTags() {
   return await db.select().from(tags)
@@ -142,6 +158,10 @@ async function deleteTags(name: string) {
 
   return deletedIds
 }
+
+//  =================================
+//              METADATA
+//  =================================
 
 async function getMetadata(imageId: number) {
   return await db.select().from(metadata).where(eq(metadata.imageId, imageId))
@@ -170,6 +190,10 @@ async function deleteMetadata(metadataId: number) {
   return deletedIds
 }
 
+//  ==============================
+//              EXPORTS
+//  ==============================
+
 export const tag = {
   get: getTags,
   create: createTag,
@@ -189,6 +213,7 @@ export const meta = {
 }
 
 export const image = {
+  addImage,
   queryPaginatedByDate,
   updateTags: updateImageTags,
   updateCategories: updateImageCategories,

@@ -1,29 +1,26 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { trpcServer } from '@hono/trpc-server'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import fs from 'node:fs/promises'
 import { z } from 'zod'
-import * as schema from '../db/schema'
+import { image } from '../db/db-handlers'
 import { appRouter } from './router'
 
-const app = new Hono()
-app.use('/trpc/*', cors())
+//  =================================
+//              HONO+TRPC
+//  =================================
 
 const port = 3000
-const db = drizzle(new Database('db/sqlite.db'), { schema })
-const { images, tags } = schema
+const app = new Hono()
+app.use('/trpc/*', cors())
+app.use('/trpc/*', trpcServer({ router: appRouter }))
 
-const reqSchema = z.object({
-  filename: z.string(),
-  data: z.instanceof(Blob),
-})
+//  =====================================
+//              IMAGE SERVING
+//  =====================================
 
 // http://localhost:3000/2023-12/6Qaa3wstCP.png
-// app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareX/' }))
 app.use('/thumbs/*', serveStatic({
   root: '../../../../../mnt/c/Users/IP/Pictures/ShareThumbs/',
   rewriteRequestPath: (path) => path.replace(/^\/thumbs/, '/'),
@@ -34,48 +31,38 @@ app.use('/full/*', serveStatic({
   rewriteRequestPath: (path) => path.replace(/^\/full/, '/'),
 }))
 
-// app.use('/*', serveStatic({ root: '../../../../../mnt/c/Users/IP/Pictures/ShareThumbs/' }))
+//  ==================================
+//              API ROUTES
+//  ==================================
 
 app.get('/', (c) => {
   console.log(c.req.url)
   return c.text('Hello Hono!')
 })
 
-app.post('/images2', async (c) => {
-  const allTags = db.select().from(tags).all()
-
-  const data = await c.req.json()
-  console.log(data)
-  // console.log(data)
-
-  return c.text('loool')
+const imageSchema = z.object({
+  filename: z.string(),
+  data: z.instanceof(Blob),
 })
 
 app.post('/images', async (c) => {
-  // parse the body
-  const body = await c.req.parseBody()
-  const { filename, data } = reqSchema.parse(body)
-
-  // find the file
-  const dateDir = new Date().toISOString().substring(0, 7)
-  const shareXPath = '/mnt/c/Users/IP/Pictures/ShareX'
-  const path = `${shareXPath}/${dateDir}/${filename}`
-  const exists = await fs.stat(path)
-  console.log(`${path}: ${exists.isFile()}, type=${data.type}`)
-
-  // insert image into database
-  // db.insert(user).values({ name: 'asdf123', email: 'asdf@example.com' }).run()
-
-  return c.text(`${dateDir}/${filename}`)
+  // note -> using filename only for now, discarding
+  try {
+    // parse the body
+    const body = await c.req.parseBody()
+    const { filename, data } = imageSchema.parse(body)
+    // console.log(`${path}: ${exists.isFile()}, type=${data.type}`)
+    const dbResult = await image.addImage(filename)
+    return c.text(`Inserted ${dbResult.lastInsertRowid} into db.`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown'
+    return c.text(msg)
+  }
 })
 
-app.use(
-  '/trpc/*',
-  trpcServer({
-    router: appRouter,
-  }),
-)
+//  ===================================
+//              INIT SERVER
+//  ===================================
 
-const server = serve({ fetch: app.fetch, port })
-
+serve({ fetch: app.fetch, port })
 console.log(`Server is running on port http://localhost:${port}`)
