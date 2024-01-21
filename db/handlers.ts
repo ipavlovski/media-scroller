@@ -70,7 +70,7 @@ async function deleteImages(imageIds: number[]) {
 
     return await tx.delete(images)
       .where(inArray(images.id, imageIds))
-      .returning({ imageId: images.id })
+      .returning({ imageId: images.id, dateAgg: images.dateAgg })
   })
 
   return changes

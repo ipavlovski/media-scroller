@@ -5,13 +5,9 @@ import type { AppRouter } from '../../backend/router'
 import { useImageActions } from '../components/images'
 type RouterOutput = inferRouterOutputs<AppRouter>
 
-
-
 export const trpc = createTRPCReact<AppRouter>()
 
 /* IMAGES */
-
-
 
 export const useInfiniteImages = () =>
   trpc.infiniteImages
@@ -19,6 +15,15 @@ export const useInfiniteImages = () =>
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       initialCursor: new Date().toISOString().substring(0, 10),
     })
+
+const returningToAgg = (updateRecords: { imageId: number; dateAgg: string }[]) => {
+  const idAgg: { [key: string]: number[] } = {}
+  updateRecords.forEach(({ imageId, dateAgg }) => {
+    idAgg[dateAgg] ??= []
+    idAgg[dateAgg].push(imageId)
+  })
+  return idAgg
+}
 
 /*
   Handle 3 types of modifications: categories, tags, metadta
@@ -54,11 +59,7 @@ const useUpdateImages = () => {
         // using IMMER to create a clone of data
         // since the category updates fail to work due to mutable changes
         const updatedData = produce(cachedData, (draftData) => {
-          const idAgg: { [key: string]: number[] } = {}
-          updateRecords.forEach(({ imageId, dateAgg }) => {
-            idAgg[dateAgg] ??= []
-            idAgg[dateAgg].push(imageId)
-          })
+          const idAgg = returningToAgg(updateRecords)
 
           Object.entries(idAgg).forEach(([dateAgg, imageIds]) =>
             draftData.pages.forEach(({ items }) =>
@@ -87,20 +88,44 @@ const useUpdateImages = () => {
 }
 
 export const useDeleteImages = () => {
-  const { getSelected } = useImageActions()
+  // todo: make 'clearSelected' action
+  const { getSelected, deselectAll } = useImageActions()
+  const utils = trpc.useUtils()
+
   const deleteImages = trpc.deleteImages.useMutation({
-    onSuccess: (output, input) => {
-      console.log(`Successfully deleted ${output.length} images`)
+    onSuccess: (queryData) => {
+      console.log(`Successfully deleted ${queryData.length} images`)
+
+      utils.infiniteImages.setInfiniteData({}, (cachedData) => {
+        if (!cachedData) return { pages: [], pageParams: [] }
+
+        const updatedData = produce(cachedData, (draftData) => {
+          const idAgg = returningToAgg(queryData)
+          Object.entries(idAgg).forEach(([dateAgg, imageIds]) =>
+            draftData.pages.forEach(({ items }) =>
+              items.forEach(({ date, images }) => {
+                date == dateAgg && imageIds.forEach((imageId) => {
+                  const imageInd = images.findIndex((image) => image.id == imageId)
+                  if (imageInd != -1) images.splice(imageInd, 1)
+                })
+              })
+            )
+          )
+        })
+
+        return { ...updatedData }
+      })
+
+      deselectAll()
     },
   })
-  // deleteImages.is
 
   return {
     isPending: deleteImages.isPending,
     delete: async () => {
       const imageIds = getSelected().map((v) => v.id)
       return await deleteImages.mutateAsync({ imageIds })
-    }
+    },
   }
 }
 
