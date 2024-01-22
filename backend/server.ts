@@ -3,6 +3,8 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { trpcServer } from '@hono/trpc-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import type { Server as HTTPServer } from 'node:http'
+import { WebSocket, WebSocketServer } from 'ws'
 import { z } from 'zod'
 import { image } from '../db/db-handlers'
 import { appRouter } from './router'
@@ -13,6 +15,8 @@ import { appRouter } from './router'
 
 const port = 3000
 const app = new Hono()
+let websocket: WebSocket
+
 app.use('/trpc/*', cors())
 app.use('/trpc/*', trpcServer({ router: appRouter }))
 
@@ -46,13 +50,17 @@ const imageSchema = z.object({
 })
 
 app.post('/images', async (c) => {
-  // note -> using filename only for now, discarding
+  // note -> using filename only for now, discarding body
   try {
-    // parse the body
     const body = await c.req.parseBody()
     const { filename, data } = imageSchema.parse(body)
-    // console.log(`${path}: ${exists.isFile()}, type=${data.type}`)
     const dbResult = await image.addImage(filename)
+
+    websocket?.send(JSON.stringify({
+      data: `SOCKET: inserted id is ${dbResult.lastInsertRowid}`,
+      id: dbResult.lastInsertRowid
+    }))
+
     return c.text(`Inserted ${dbResult.lastInsertRowid} into db.`)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
@@ -64,5 +72,22 @@ app.post('/images', async (c) => {
 //              INIT SERVER
 //  ===================================
 
-serve({ fetch: app.fetch, port })
-console.log(`Server is running on port http://localhost:${port}`)
+const server = serve({ fetch: app.fetch, port }, (info) => {
+  console.log(`Listening on http://localhost:${info.port}`)
+})
+
+//  ==================================
+//              WEBSOCKETS
+//  ==================================
+
+const wss = new WebSocketServer({ server: server as HTTPServer })
+
+wss.on('connection', function connection(ws) {
+  websocket = ws
+
+  ws.on('error', console.error)
+
+  ws.on('message', function message(data) {
+    console.log('received: %s', data)
+  })
+})

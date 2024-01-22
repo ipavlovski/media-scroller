@@ -27,6 +27,7 @@
     "react-icons": "^4.12.0",
     "react-intersection-observer": "^9.5.3",
     "sharp": "^0.33.1",
+    "ws": "^8.16.0",
     "zod": "^3.22.4",
     "zustand": "^4.4.7"
   },
@@ -37,6 +38,7 @@
     "@types/node": "^20.10.6",
     "@types/react": "18.2.38",
     "@types/react-dom": "^18.2.18",
+    "@types/ws": "^8.5.10",
     "@vitejs/plugin-react": "^4.2.1",
     "dprint": "^0.45.0",
     "drizzle-kit": "^0.20.9",

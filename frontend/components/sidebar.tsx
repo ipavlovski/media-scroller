@@ -10,6 +10,7 @@ import { Flex } from '../styled-system/jsx'
 import { Dialog, DialogProps } from './dialog'
 import { SelectedImage, useImageActions, useImageSelection } from './images'
 import { useToast } from './toast'
+import Websockets from './websocket'
 
 //  ===========================
 //           STORE
@@ -531,6 +532,7 @@ function SearchBar() {
     <div>
       <input className={styles} type='search' />
       <Flex mt='.5rem' gap='.25rem' mb='1.5rem'>
+        <Websockets />
         <TbCategory size={'1.25rem'} />
         <TbTags size={'1.25rem'} />
         <BsJournal size={'1.25rem'} strokeWidth={0.25} />
