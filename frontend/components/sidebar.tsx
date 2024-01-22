@@ -109,20 +109,18 @@ export const useAllFilters = () => useSidebarStore((state) => state.filters)
 //  ===========================
 
 type CategoryItemProps = Categories[0] & { imageIds: number[] }
-
 function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }) {
   const { category: { id, name, imageIds }, selActive } = props
-  const len = imageIds.length
 
+  const updateImageCategories = useUpdateImageCategories()
   const { error, success } = useToast()
   const { getSelected } = useImageActions()
-  const updateImageCategories = useUpdateImageCategories()
+  const { addFilter, removeFilter, setFilter } = useSidebarActions()
   const filteredCategories = useFilteredCategories()
-  const { addFilter, removeFilter } = useSidebarActions()
 
-  const isFiltered = filteredCategories.includes(id)
+  const isSelected = filteredCategories.includes(id)
 
-  const onClickName = () => {
+  const onClickName: MouseEventHandler = (e) => {
     if (selActive) return
 
     const filter = {
@@ -130,7 +128,17 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
       categoryId: id,
     } satisfies Extract<FilterAction, { type: 'category' }>
 
-    isFiltered ? removeFilter(filter) : addFilter(filter)
+    // isSelected ? removeFilter(filter) : addFilter(filter)
+
+    if (e.shiftKey) {
+      isSelected ? removeFilter(filter) : addFilter(filter)
+    } else {
+      ;(isSelected && filteredCategories.length > 1) || !isSelected
+        ? setFilter(filter)
+        : removeFilter(filter)
+    }
+
+    document.getSelection()?.removeAllRanges()
   }
 
   const onClickCount: MouseEventHandler = async (e) => {
@@ -144,10 +152,9 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
 
     try {
       const imageIds = getSelected().map((v) => v.id)
-      console.log(
-        `calling assignment with categories:${id} and imageIds: ${imageIds.join(',')}`,
-      )
+      console.log(`assign with categories:${id} and imageIds: ${imageIds.join(',')}`)
       const result = await updateImageCategories(id, imageIds)
+
       success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error.'
@@ -179,7 +186,7 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
       <p
         key={id}
         style={{
-          color: isFiltered ? 'pink' : undefined,
+          color: isSelected ? 'pink' : undefined,
           cursor: selActive ? undefined : 'pointer',
         }}
         onClick={onClickName}>
@@ -189,8 +196,11 @@ function CategoryItem(props: { category: CategoryItemProps; selActive: boolean }
         <span
           title={'click to add all\nshift+click to subtract all'}
           onClick={onClickCount}
-          style={{ backgroundColor: len > 0 ? 'yellow' : undefined }}>
-          {len > 0 ? len : id != 0 ? '+' : null}
+          style={{
+            backgroundColor: imageIds.length > 0 ? 'yellow' : undefined,
+            cursor: id != 0 ? undefined : 'default',
+          }}>
+          {imageIds.length > 0 ? imageIds.length : id != 0 ? '+' : null}
         </span>
       )}
     </div>
@@ -212,7 +222,7 @@ const groupSelectionByCategories = (imageSelection: SelectedImage[]) => {
 
 function CategoryResults() {
   const { data: categories } = useCategories()
-  const imageSelection = useImageSelection()
+  const selection = useImageSelection()
 
   const defaultCategory = {
     id: 0,
@@ -226,16 +236,14 @@ function CategoryResults() {
   const allCategories = categories?.map((c) => ({ ...c, imageIds: [] as number[] })) ?? []
   allCategories.push(defaultCategory)
 
-  groupSelectionByCategories(imageSelection).forEach(({ categoryId, imageIds }) => {
+  groupSelectionByCategories(selection).forEach(({ categoryId, imageIds }) => {
     const match = allCategories?.find((category) => category.id == categoryId)
     if (match) match.imageIds = imageIds
   })
 
   return allCategories.map((category) => {
-    return (
-      <CategoryItem category={category} key={category.id}
-        selActive={imageSelection.length > 0} />
-    )
+    const { id } = category
+    return <CategoryItem category={category} key={id} selActive={selection.length > 0} />
   })
 }
 
@@ -257,8 +265,8 @@ function CategoriesDivider() {
 //  ===========================
 
 type TagItemProps = Tags[0] & { imageIds: number[] }
-function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) {
-  const { id, name, imageIds } = tag
+function TagItem(props: { tag: TagItemProps; selActive: boolean }) {
+  const { tag: { id, name, imageIds }, selActive } = props
 
   const updateImageTags = useUpdateImageTags()
   const { error, success } = useToast()
@@ -297,9 +305,7 @@ function TagItem({ tag, selActive }: { tag: TagItemProps; selActive: boolean }) 
 
     try {
       const imageIds = getSelected().map((v) => v.id)
-      console.log(
-        `calling assignment with tagId:${id} and imageIds: ${imageIds.join(',')}`,
-      )
+      console.log(`assign with tagId:${id} and imageIds: ${imageIds.join(',')}`)
       const result = await updateImageTags(id, imageIds)
 
       success(`Updated ${result.updateRecords?.length || 0} images with ${name}`)
@@ -373,7 +379,7 @@ const groupSelectionByTags = (imageSelection: SelectedImage[]) => {
 
 function TagResults() {
   const { data: tags } = useTags()
-  const imageSelection = useImageSelection()
+  const selection = useImageSelection()
 
   const defaultTag = {
     id: 0,
@@ -388,13 +394,14 @@ function TagResults() {
   const allTags = tags?.map((tag) => ({ ...tag, imageIds: [] as number[] })) ?? []
   allTags.push(defaultTag)
 
-  groupSelectionByTags(imageSelection).forEach(({ tagId, imageIds }) => {
+  groupSelectionByTags(selection).forEach(({ tagId, imageIds }) => {
     const match = allTags?.find((tag) => tag.id == tagId)
     if (match) match.imageIds = imageIds
   })
 
   return allTags.map((tag) => {
-    return <TagItem tag={tag} key={tag.id} selActive={imageSelection.length > 0} />
+    const { id } = tag
+    return <TagItem tag={tag} key={id} selActive={selection.length > 0} />
   })
 }
 
@@ -474,7 +481,7 @@ const useImageDeleteShortcut = () => {
 
       if (e.key == ' ') {
         console.log('SPACE')
-        e.preventDefault() 
+        e.preventDefault()
       }
     }
 
